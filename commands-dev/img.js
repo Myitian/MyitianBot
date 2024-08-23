@@ -6,6 +6,8 @@ const anosu = require("../apis/anosu");
 const jitsu = require("../apis/jitsu");
 const mirlkoi = require("../apis/mirlkoi");
 const log = require("../log");
+const yandere = require("../apis/yandere");
+const { fileSizeToString } = require("../utils");
 
 
 module.exports = {
@@ -155,7 +157,22 @@ module.exports = {
                     option.setName("num")
                         .setDescription("返回的数量")
                         .setMinValue(1)
-                        .setMaxValue(10))),
+                        .setMaxValue(10)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("yandere")
+                .setDescription("yande.re")
+                .addStringOption(option =>
+                    option.setName("tags")
+                        .setDescription("图像标签，用+连接"))
+                .addIntegerOption(option =>
+                    option.setName("num")
+                        .setDescription("数量")
+                        .setMinValue(1)
+                        .setMaxValue(10))
+                .addBooleanOption(option =>
+                    option.setName("random")
+                        .setDescription("是否随机抽取"))),
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -351,6 +368,64 @@ module.exports = {
 
                     if (!content && !embeds.length)
                         content = "无返回图片！";
+
+                    log.log(commandID, "Return", content, embeds.length);
+                    await interaction.editReply({ content: content, embeds: embeds });
+                }
+                break;
+            case "yandere":
+                {
+                    const tags = options.getString("tags") ?? "";
+                    const num = options.getInteger("num") ?? 1;
+                    const random = options.getBoolean("random") ?? true;
+
+                    let content = null;
+                    const embeds = [];
+
+                    const response = random ?
+                        await yandere.getRandom(tags, num) :
+                        await yandere.getNewest(tags, num);
+
+                    let nsfwCount = 0;
+
+                    for (const info of response) {
+                        let rating = null;
+                        switch (info.rating) {
+                            case "s":
+                                rating = "安全";
+                                break;
+                            case "q":
+                                rating = "可疑";
+                                break;
+                            case "e":
+                                rating = "暴露";
+                                break;
+                        }
+                        if (info.rating !== "s" && !interaction.channel.nsfw) {
+                            nsfwCount++;
+                            continue;
+                        }
+                        log.log(info);
+                        log.log(commandID, "Image", info.file_url);
+                        embeds.push(new EmbedBuilder()
+                            .setTitle(info.title)
+                            .setURL(`https://yande.re/post/show/${info.id}`)
+                            .setImage(info.sample_url)
+                            .setDescription(`原图：[${info.file_ext.toUpperCase()},${fileSizeToString(info.file_size)}](${info.file_url})`)
+                            .addFields(
+                                { name: "评级", value: rating, inline: true },
+                                { name: "评分", value: info.score.toString(), inline: true },
+                                { name: "标签", value: info.tags },
+                                { name: "原图宽", value: info.width.toString(), inline: true },
+                                { name: "原图高", value: info.height.toString(), inline: true }
+                            )
+                            .setTimestamp(new Date(info.updated_at * 1000)));
+                        i++;
+                    }
+
+                    if (nsfwCount > 0 && !interaction.channel.nsfw) {
+                        content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${nsfwCount}张）。请移步至有年龄限制的频道。`;
+                    }
 
                     log.log(commandID, "Return", content, embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });

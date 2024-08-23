@@ -40,6 +40,8 @@ module.exports = {
         switch (subcommand) {
             case "ping":
                 {
+                    log.log("mc ping");
+
                     const rawHost = options.getString("host").trim();
                     const rawPort = options.getInteger("port");
 
@@ -78,6 +80,8 @@ module.exports = {
                 break;
             case "skin":
                 {
+                    log.log("mc skin");
+
                     const name = options.getString("name").trim();
 
                     const url = name.length === 32 ?

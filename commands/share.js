@@ -4,7 +4,7 @@ const axios = require("axios").default;
 const log = require("../log");
 const { getIllustInfo } = require("../apis/pixiv");
 const { getMD, getVID, getMC, getEP } = require("../apis/bilibili");
-const { formatDateTime, checkNSFWLevel, durationToString } = require("../utils");
+const { formatDateTime, durationToString } = require("../utils");
 
 
 /**

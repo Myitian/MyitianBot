@@ -4,7 +4,7 @@ const axios = require("axios").default;
 const log = require("../log");
 const { getIllustInfo } = require("../apis/pixiv");
 const { getMD, getVID, getMC, getEP } = require("../apis/bilibili");
-const { formatDateTime, checkNSFWLevel, durationToString } = require("../utils");
+const { formatDateTime, durationToString } = require("../utils");
 
 
 /**
@@ -28,7 +28,7 @@ async function processVID(returnType, aid = undefined, bvid = undefined) {
     const pubdate = new Date(info.pubdate * 1000);
     const timeStr = formatDateTime(pubdate);
     const builder = new EmbedBuilder()
-        .setAuthor({ name: escapeMarkdown(info.authorName), url: `https://space.bilibili.com/${info.authorID}`, iconURL: info.authorAvater })
+        .setAuthor({ name: info.authorName, url: `https://space.bilibili.com/${info.authorID}`, iconURL: info.authorAvater })
         .setTitle(escapeMarkdown(info.title))
         .setURL(`https://www.bilibili.com/video/${info.bvid}`)
         .setTimestamp(pubdate);
@@ -81,7 +81,7 @@ async function processMC(returnType, mdid) {
         return mc.message;
     }
     const builder = new EmbedBuilder()
-        .setAuthor({ name: escapeMarkdown(mc.authors.join("，")) })
+        .setAuthor({ name: mc.authors.join("，") })
         .setTitle(escapeMarkdown(mc.title))
         .setURL(`https://manga.bilibili.com/detail/mc${mc.id}`);
 
