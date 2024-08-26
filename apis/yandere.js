@@ -1,4 +1,3 @@
-const { randomInt } = require("node:crypto");
 const axios = require("axios").default;
 const log = require("../log");
 const { sample } = require("../utils");
@@ -10,6 +9,7 @@ const { sample } = require("../utils");
  * @returns {Promise<{
  *          id:number,
  *          tags:string,
+ *          md5:string,
  *          updated_at:number,
  *          score:number,
  *          file_size:number,
@@ -60,6 +60,7 @@ module.exports = {
      * @returns {Promise<{
      *          id:number,
      *          tags:string,
+     *          md5:string,
      *          updated_at:number,
      *          score:number,
      *          file_size:number,
@@ -80,7 +81,7 @@ module.exports = {
         const result = new Array(pages.length);
         for (let i = 0; i < pages.length; i++) {
             log.log("Pick index", pages[i]);
-            result[i] = await get(tags, 1, pages[i]);
+            result[i] = (await get(tags, 1, pages[i]))[0];
         }
         return result;
     },
@@ -90,6 +91,7 @@ module.exports = {
      * @returns {Promise<{
      *          id:number,
      *          tags:string,
+     *          md5:string,
      *          updated_at:number,
      *          score:number,
      *          file_size:number,

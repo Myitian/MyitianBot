@@ -190,13 +190,16 @@ module.exports = {
                     let content = null;
                     const embeds = [];
 
+                    let filteredNSFW = 0;
+
                     const response = await lolicon_api_v1.getJson(r18, keyword, num);
 
                     if (response.code === 0 && response.data) {
                         for (const setu of response.data) {
                             log.log(commandID, "Image", setu.url);
                             if (setu.r18 && !interaction.channel.nsfw) {
-                                content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
+                                log.log(commandID, "Filtered");
+                                filteredNSFW++;
                                 continue;
                             }
                             embeds.push(new EmbedBuilder()
@@ -219,6 +222,9 @@ module.exports = {
                         content = response.error;
                     else if (response.msg)
                         content = response.msg;
+
+                    if (filteredNSFW > 0 && !interaction.channel.nsfw)
+                        content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${filteredNSFW}张）。请移步至有年龄限制的频道。`;
 
                     if (!content && !embeds.length)
                         content = "无返回图片！";
@@ -251,13 +257,16 @@ module.exports = {
                     let content = null;
                     const embeds = [];
 
+                    let filteredNSFW = 0;
+
                     const response = await anosu.getJson(r18, keyword, num, db);
 
                     if (response.length) {
                         for (const setu of response) {
                             log.log(commandID, "Image", setu.url);
                             if (setu.r18 && !interaction.channel.nsfw) {
-                                content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
+                                log.log(commandID, "Filtered");
+                                filteredNSFW++;
                                 continue;
                             }
                             embeds.push(new EmbedBuilder()
@@ -276,6 +285,9 @@ module.exports = {
                         }
                     }
 
+                    if (filteredNSFW > 0 && !interaction.channel.nsfw)
+                        content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${filteredNSFW}张）。请移步至有年龄限制的频道。`;
+
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
@@ -291,44 +303,40 @@ module.exports = {
                     let content = null;
                     const embeds = [];
 
-                    if (sort === "!special") {
-                        if (!interaction.channel.nsfw) {
-                            content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
-                        } else {
+                    if ((sort === "r18" || sort === "!special") && !interaction.channel.nsfw) {
+                        content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
+                    } else {
+                        if (sort === "!special") {
                             const response = await jitsu.getSpecialR18Json(sort, num);
                             if (response.pic) {
                                 log.log(commandID, "Image", response.pic);
                                 embeds.push(new EmbedBuilder()
                                     .setImage(response.pic));
                             }
-                        }
-                    } else {
-                        const response = await jitsu.getJson(sort, num);
+                        } else {
+                            const response = await jitsu.getJson(sort, num);
 
-                        if (response.pics) {
-                            let i = 0;
-                            for (const setu of response.pics) {
-                                log.log(commandID, "Image", setu);
-                                if (sort === "r18" && !interaction.channel.nsfw) {
-                                    content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
-                                    continue;
+                            if (response.pics) {
+                                let i = 0;
+                                for (const setu of response.pics) {
+                                    log.log(commandID, "Image", setu);
+                                    const regex = /\/(\d+)_p(\d+)\./;
+                                    const match = regex.exec(setu);
+                                    if (match) {
+                                        embeds.push(new EmbedBuilder()
+                                            .addFields(
+                                                { name: "PID", value: match[1], inline: true },
+                                                { name: "P", value: match[2], inline: true },
+                                                { name: "R18", value: sort === "r18" ? "是" : "否", inline: true }
+                                            )
+                                            .setImage(setu));
+                                    } else {
+                                        embeds.push(new EmbedBuilder()
+                                            .setDescription(i.toString())
+                                            .setImage(setu));
+                                    }
+                                    i++;
                                 }
-                                const regex = /\/(\d+)_p(\d+)\./;
-                                const match = regex.exec(setu);
-                                if (match) {
-                                    embeds.push(new EmbedBuilder()
-                                        .addFields(
-                                            { name: "PID", value: match[1], inline: true },
-                                            { name: "P", value: match[2], inline: true },
-                                            { name: "R18", value: sort === "r18" ? "是" : "否", inline: true }
-                                        )
-                                        .setImage(setu));
-                                } else {
-                                    embeds.push(new EmbedBuilder()
-                                        .setDescription(i.toString())
-                                        .setImage(setu));
-                                }
-                                i++;
                             }
                         }
                     }
@@ -386,9 +394,10 @@ module.exports = {
                         await yandere.getRandom(tags, num) :
                         await yandere.getNewest(tags, num);
 
-                    let nsfwCount = 0;
+                    let filteredNSFW = 0;
 
                     for (const info of response) {
+                        log.log(commandID, "Image", info.file_url);
                         let rating = null;
                         switch (info.rating) {
                             case "s":
@@ -402,30 +411,29 @@ module.exports = {
                                 break;
                         }
                         if (info.rating !== "s" && !interaction.channel.nsfw) {
-                            nsfwCount++;
+                            log.log(commandID, "Filtered", info.rating);
+                            filteredNSFW++;
                             continue;
                         }
-                        log.log(info);
-                        log.log(commandID, "Image", info.file_url);
                         embeds.push(new EmbedBuilder()
-                            .setTitle(info.title)
+                            .setTitle(info.md5)
                             .setURL(`https://yande.re/post/show/${info.id}`)
                             .setImage(info.sample_url)
                             .setDescription(`原图：[${info.file_ext.toUpperCase()},${fileSizeToString(info.file_size)}](${info.file_url})`)
                             .addFields(
                                 { name: "评级", value: rating, inline: true },
                                 { name: "评分", value: info.score.toString(), inline: true },
-                                { name: "标签", value: info.tags },
-                                { name: "原图宽", value: info.width.toString(), inline: true },
-                                { name: "原图高", value: info.height.toString(), inline: true }
+                                { name: "原图分辨率", value: `${info.width}x${info.height}`, inline: true },
+                                { name: "标签", value: info.tags }
                             )
                             .setTimestamp(new Date(info.updated_at * 1000)));
-                        i++;
                     }
 
-                    if (nsfwCount > 0 && !interaction.channel.nsfw) {
-                        content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${nsfwCount}张）。请移步至有年龄限制的频道。`;
-                    }
+                    if (filteredNSFW > 0 && !interaction.channel.nsfw)
+                        content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${filteredNSFW}张）。请移步至有年龄限制的频道。`;
+
+                    if (!content && !embeds.length)
+                        content = "无返回图片！";
 
                     log.log(commandID, "Return", content, embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
