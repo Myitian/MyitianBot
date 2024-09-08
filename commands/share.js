@@ -28,7 +28,7 @@ async function processVID(returnType, aid = undefined, bvid = undefined) {
     const pubdate = new Date(info.pubdate * 1000);
     const timeStr = formatDateTime(pubdate);
     const builder = new EmbedBuilder()
-        .setAuthor({ name: escapeMarkdown(info.authorName), url: `https://space.bilibili.com/${info.authorID}`, iconURL: info.authorAvater })
+        .setAuthor({ name: info.authorName, url: `https://space.bilibili.com/${info.authorID}`, iconURL: info.authorAvater })
         .setTitle(escapeMarkdown(info.title))
         .setURL(`https://www.bilibili.com/video/${info.bvid}`)
         .setTimestamp(pubdate);
@@ -245,7 +245,7 @@ module.exports = {
                     { name: "大图", value: "big-img" }
                 )),
     /** @param {CommandInteraction} interaction  */
-    async execute(interaction) {
+    async execute(interaction, client) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
@@ -323,7 +323,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "未知的ID";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;
@@ -403,7 +403,7 @@ module.exports = {
                         }
                         embeds.push(builder);
                     }
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;

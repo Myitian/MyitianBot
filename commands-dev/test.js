@@ -4,7 +4,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("test")
         .setDescription("测试用"),
-    async execute(interaction) {
+    async execute(interaction, client) {
         const select = new StringSelectMenuBuilder()
             .setCustomId('starter')
             .setPlaceholder('Make a selection!')

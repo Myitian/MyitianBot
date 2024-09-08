@@ -31,21 +31,21 @@ module.exports = {
         const type2 = /(\d+)-(\d+)/;
         let p = 0;
         do {
-            const type0match = type0.exec(pid);
-            if (type0match)
-                break;
-            const type1match = type1.exec(pid);
-            if (type1match) {
-                pid = type1match[1];
-                p = Number.parseInt(type1match[2]);
-                break;
-            }
             const type2match = type2.exec(pid);
             if (type2match) {
                 pid = type2match[1];
                 p = Number.parseInt(type2match[2]) - 1;
                 break;
             }
+            const type1match = type1.exec(pid);
+            if (type1match) {
+                pid = type1match[1];
+                p = Number.parseInt(type1match[2]);
+                break;
+            }
+            const type0match = type0.exec(pid);
+            if (type0match)
+                break;
             return null;
         } while (false);
 

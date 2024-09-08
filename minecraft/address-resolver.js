@@ -30,11 +30,15 @@ module.exports = {
             port = 25565
         if (port === 25565) {
             try {
+                const mcSRV = "_minecraft._tcp." + host;
+                log.log("checking SRV record:", mcSRV);
                 const newHostPort = await dnsResolveSRV("_minecraft._tcp." + host);
                 host = newHostPort.name;
                 port = newHostPort.port;
+                log.log("SRV record found");
             } catch { }
         }
+        log.log("Address", host, port);
         return ({ host: host, port: port });
     }
 }

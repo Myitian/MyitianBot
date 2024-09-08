@@ -10,12 +10,18 @@ module.exports = {
         const commands = [];
         const commandsPath = path.join(__dirname, "commands");
         const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+        log.log(commandFiles);
         
         for (const file of commandFiles) {
+            log.log(file);
             const filePath = path.join(commandsPath, file);
             const command = require(filePath);
             if ("data" in command && "execute" in command) {
-                commands.push(command.data.toJSON());
+                try {
+                    commands.push(command.data.toJSON());
+                } catch (e) {
+                    log.log(e);
+                }
             } else {
                 log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
             }
@@ -24,13 +30,18 @@ module.exports = {
         const commandsDev = [];
         const commandsDevPath = path.join(__dirname, "commands-dev");
         const commandDevFiles = fs.readdirSync(commandsDevPath).filter(file => file.endsWith(".js"));
-        
+        log.log(commandDevFiles);
+
         for (const file of commandDevFiles) {
             const filePath = path.join(commandsDevPath, file);
             const command = require(filePath);
             command.data.name = "dev-" + command.data.name;
             if ("data" in command && "execute" in command) {
-                commandsDev.push(command.data.toJSON());
+                try {
+                    commandsDev.push(command.data.toJSON());
+                } catch (e) {
+                    log.log(e);
+                }
             } else {
                 log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
             }

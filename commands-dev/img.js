@@ -174,7 +174,7 @@ module.exports = {
                     option.setName("random")
                         .setDescription("是否随机抽取"))),
 
-    async execute(interaction) {
+    async execute(interaction, client) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
@@ -229,7 +229,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;
@@ -243,7 +243,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;
@@ -291,7 +291,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;
@@ -344,7 +344,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;
@@ -377,7 +377,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;
@@ -435,7 +435,7 @@ module.exports = {
                     if (!content && !embeds.length)
                         content = "无返回图片！";
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;

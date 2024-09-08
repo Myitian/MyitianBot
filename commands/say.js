@@ -22,7 +22,7 @@ module.exports = {
                     option.setName("content")
                         .setDescription("内容")
                         .setRequired(true))),
-    async execute(interaction) {
+    async execute(interaction, client) {
         /** @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const subcommand = options.getSubcommand();

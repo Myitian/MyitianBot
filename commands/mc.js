@@ -30,9 +30,8 @@ module.exports = {
                     option.setName("name")
                         .setDescription("UUID 或玩家名")
                         .setRequired(true))),
-    async execute(interaction) {
-
-        await interaction.deferReply(); randomInt
+    async execute(interaction, client) {
+        await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
@@ -71,10 +70,13 @@ module.exports = {
                             ));
                     } catch (e) {
                         content = "无法解析或连接服务器";
-                        log.error(commandID, e);
+                        if (e?.response?.data)
+                            content += `\n${e.response.data}`;
+                        else
+                            log.error(commandID, e);
                     }
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds, files: files });
                 }
                 break;
@@ -113,7 +115,7 @@ module.exports = {
                             .setImage(`https://vzge.me/skin/${data.id}.png?no=ears`));
                     }
 
-                    log.log(commandID, "Return", content, embeds.length);
+                    log.log(commandID, "Return", JSON.stringify(content), embeds.length);
                     await interaction.editReply({ content: content, embeds: embeds });
                 }
                 break;

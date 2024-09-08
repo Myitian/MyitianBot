@@ -18,6 +18,7 @@ for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
+        log.log(command.data.name);
         client.commands.set(command.data.name, command);
     } else {
         log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
@@ -31,6 +32,7 @@ for (const file of commandDevFiles) {
     const filePath = path.join(commandsDevPath, file);
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
+        log.log(command.data.name);
         client.commands.set(command.data.name, command);
     } else {
         log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
@@ -53,7 +55,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     try {
-        await command.execute(interaction);
+        await command.execute(interaction, interaction.client);
     } catch (error) {
         log.error(error);
         if (interaction.replied || interaction.deferred) {

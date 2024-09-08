@@ -10,7 +10,8 @@ module.exports = {
 			option.setName("url")
 				.setDescription("URL")
 				.setRequired(true)),
-	async execute(interaction) {
+	async execute(interaction, client) {
+        await interaction.deferReply();
 		const url = interaction.options.getString("url");
 		log.log("Requesting", url);
 		const resp = await axios({
@@ -18,6 +19,6 @@ module.exports = {
 			url: url,
 			responseType: "text"
 		});
-		await interaction.reply(escapeMarkdown(resp.data));
+		await interaction.editReply(escapeMarkdown(resp.data));
 	},
 };
