@@ -1,13 +1,30 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { Client, Collection, Events, GatewayIntentBits } = require("discord.js");
-const { token } = require("./config.json");
+const { Client, Collection, Events, GatewayIntentBits, Partials, MessageCreateOptions, MessageType } = require("discord.js");
+const { token, userInfo } = require("./config.json");
 const { deployCommands } = require("./deploy-commands");
 const log = require("./log");
+const { triggerDDNS, updateDDNS } = require("./utils");
 
 deployCommands();
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildPresences
+    ],
+    partials: [
+        Partials.Channel,
+        Partials.Message,
+        Partials.User,
+        Partials.GuildMember,
+        Partials.Reaction
+    ]
+})
 
 client.commands = new Collection();
 
@@ -18,10 +35,9 @@ for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
-        log.log(command.data.name);
         client.commands.set(command.data.name, command);
     } else {
-        log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+        log.warn(`位于 ${filePath} 缺失必要的 "data" 或 "execute" 属性。`);
     }
 }
 
@@ -32,42 +48,62 @@ for (const file of commandDevFiles) {
     const filePath = path.join(commandsDevPath, file);
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
-        log.log(command.data.name);
         client.commands.set(command.data.name, command);
     } else {
-        log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+        log.warn(`位于 ${filePath} 缺失必要的 "data" 或 "execute" 属性。`);
     }
-}
-
-log.log("Registered commands:")
-for (const [name, cmd] of client.commands) {
-    log.log(name)
 }
 
 client.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    const command = interaction.client.commands.get(interaction.commandName);
-
-    if (!command) {
-        log.error(`No command matching ${interaction.commandName} was found.`);
-        return;
-    }
-
-    try {
-        await command.execute(interaction, interaction.client);
-    } catch (error) {
-        log.error(error);
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: "执行命令时出现异常！", ephemeral: true });
-        } else {
-            await interaction.reply({ content: "执行命令时出现异常！", ephemeral: true });
+    if (interaction.isChatInputCommand()) {
+        const command = interaction.client.commands.get(interaction.commandName);
+        if (!command) {
+            log.error(`未找到匹配 ${interaction.commandName} 的命令。`);
+            return;
+        }
+        try {
+            try {
+                await command.execute(interaction);
+            } catch (e) {
+                const error = e instanceof Error ? e : new Error(e);
+                log.error(error);
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ content: `执行命令时出现异常！\n${error.message}`, ephemeral: true });
+                } else {
+                    await interaction.reply({ content: `执行命令时出现异常！\n${error.message}`, ephemeral: true });
+                }
+            }
+        } catch (e) {
+            const error = e instanceof Error ? e : new Error(e);
+            log.error(error);
         }
     }
 });
 
+client.on(Events.PresenceUpdate, async (oldPresence, presence) => {
+    if (presence == null) {
+        return;
+    }
+    if (oldPresence?.status != presence.status) {
+        log.log(`${presence.user?.displayName ?? presence.user?.globalName ?? presence.user?.username} in ${presence.guild?.name} is ${presence.status}!`);
+    }
+    // FurinaServer
+    if (presence.user?.id == userInfo.appID) {
+        await triggerDDNS(presence.status);
+    }
+})
+
+client.on(Events.MessageUpdate, async (_, message) => {
+    // FurinaServer /ipfw
+    if (message?.author.id == userInfo.appID &&
+        message?.type == MessageType.ChatInputCommand &&
+        message?.interaction?.commandName == userInfo.command) {
+        await updateDDNS(message.content);
+    }
+})
+
 client.once(Events.ClientReady, readyClient => {
-    log.log(`Ready! Logged in as ${readyClient.user.tag}`);
+    log.log(`初始化完成！以 ${readyClient.user.tag} 身份登录！`);
 });
 
 client.login(token);

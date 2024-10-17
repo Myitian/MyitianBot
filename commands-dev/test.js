@@ -1,10 +1,13 @@
-const { SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder } = require("discord.js");
+const { SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder, CommandInteraction, CommandInteractionOptionResolver } = require("discord.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("test")
         .setDescription("测试用"),
-    async execute(interaction, client) {
+    /** @param {CommandInteraction} interaction */
+    async execute(interaction) {
+        await interaction.deferReply();
+        /** @type {CommandInteractionOptionResolver} */
         const select = new StringSelectMenuBuilder()
             .setCustomId('starter')
             .setPlaceholder('Make a selection!')

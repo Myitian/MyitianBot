@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, CommandInteraction } = require("discord.js");
 const { randomInt } = require("node:crypto");
 const axios = require("axios").default;
 const lolicon_api_v1 = require("../apis/lolicon-api-v1")
@@ -80,7 +80,7 @@ module.exports = {
                 .addBooleanOption(option =>
                     option.setName("exclude-ai")
                         .setDescription("排除 AI 作品"))
-                .addBooleanOption(option =>
+                .addStringOption(option =>
                     option.setName("aspect-ratio")
                         .setDescription("图片长宽比，详见文档（https://api.lolicon.app/#/setu?id=aspectratio）")))
         .addSubcommand(subcommand =>
@@ -174,7 +174,8 @@ module.exports = {
                     option.setName("random")
                         .setDescription("是否随机抽取"))),
 
-    async execute(interaction, client) {
+    /** @param {CommandInteraction} interaction */
+    async execute(interaction) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */

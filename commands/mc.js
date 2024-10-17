@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, AttachmentBuilder, CommandInteraction } = require("discord.js");
 const { randomInt } = require("node:crypto");
 const axios = require("axios").default;
 const log = require("../log");
@@ -30,7 +30,8 @@ module.exports = {
                     option.setName("name")
                         .setDescription("UUID 或玩家名")
                         .setRequired(true))),
-    async execute(interaction, client) {
+    /** @param {CommandInteraction} interaction */
+    async execute(interaction) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */

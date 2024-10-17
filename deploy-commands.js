@@ -13,7 +13,6 @@ module.exports = {
         log.log(commandFiles);
         
         for (const file of commandFiles) {
-            log.log(file);
             const filePath = path.join(commandsPath, file);
             const command = require(filePath);
             if ("data" in command && "execute" in command) {
@@ -23,7 +22,7 @@ module.exports = {
                     log.log(e);
                 }
             } else {
-                log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                log.warn(`位于 ${filePath} 缺失必要的 "data" 或 "execute" 属性。`);
             }
         }
 
@@ -43,14 +42,14 @@ module.exports = {
                     log.log(e);
                 }
             } else {
-                log.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                log.warn(`位于 ${filePath} 缺失必要的 "data" 或 "execute" 属性。`);
             }
         }
 
         const rest = new REST().setToken(token);
 
         try {
-            log.log(`Started refreshing ${commands.length}(${commandsDev.length} dev) application (/) commands.`);
+            log.log(`开始刷新应用命令！`);
 
             const data = await rest.put(
                 Routes.applicationCommands(clientID),
@@ -62,7 +61,7 @@ module.exports = {
                 { body: commandsDev },
             );
 
-            log.log(`Successfully reloaded ${data.length}(${dataDev.length} dev) application (/) commands.`);
+            log.log(`成功刷新 ${data.length}(${dataDev.length} dev) 个应用命令！`);
         } catch (error) {
             log.error(error);
         }

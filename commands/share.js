@@ -244,8 +244,8 @@ module.exports = {
                     { name: "详细", value: "details" },
                     { name: "大图", value: "big-img" }
                 )),
-    /** @param {CommandInteraction} interaction  */
-    async execute(interaction, client) {
+    /** @param {CommandInteraction} interaction */
+    async execute(interaction) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
