@@ -30,52 +30,54 @@ module.exports = {
         if (DDNS.executing) {
             return;
         }
-        DDNS.executing = true;
-        const now = new Date();
-        const diff = now - DDNS.lastUpdate;
-        DDNS.lastUpdate = now;
-        if (status === "offline") {
-            DDNS.updated = false;
-        } else if ((!DDNS.updated && diff > 60000) || diff > 10 * 60 * 1000) {
-            const headers = {
-                "Authorization": userInfo.token
-            };
-            /** @type {{data:{application_commands:{id:string,type:number,version:string,name:string,application_id:string}[]}}} */
-            const commands = await axios({
-                method: "get",
-                url: `https://discord.com/api/v9/guilds/${userInfo.guildID}/application-command-index`,
-                responseType: "json",
-                headers: headers
-            });
-            /** @type {{id:string,type:number,version:string,name:string}?} */
-            let ipfw = null;
-            for (const command of commands.data.application_commands) {
-                if (command.name != userInfo.command || command.application_id != userInfo.appID) {
-                    continue;
-                }
-                ipfw = {
-                    version: command.version,
-                    id: command.id,
-                    name: command.name,
-                    type: command.type
+        try {
+            DDNS.executing = true;
+            const now = new Date();
+            const diff = now - DDNS.lastUpdate;
+            if (status === "offline") {
+                DDNS.updated = false;
+            } else if ((!DDNS.updated && diff > 5 * 60 * 1000) || diff > 10 * 60 * 1000) {
+                const headers = {
+                    "Authorization": userInfo.token
                 };
-                break;
+                /** @type {{data:{application_commands:{id:string,type:number,version:string,name:string,application_id:string}[]}}} */
+                const commands = await axios({
+                    method: "get",
+                    url: `https://discord.com/api/v10/guilds/${userInfo.guildID}/application-command-index`,
+                    responseType: "json",
+                    headers: headers
+                });
+                /** @type {{id:string,type:number,version:string,name:string}?} */
+                let ipfw = null;
+                for (const command of commands.data.application_commands) {
+                    if (command.name != userInfo.command || command.application_id != userInfo.appID) {
+                        continue;
+                    }
+                    ipfw = {
+                        version: command.version,
+                        id: command.id,
+                        name: command.name,
+                        type: command.type
+                    };
+                    break;
+                }
+                if (ipfw == null) {
+                    DDNS.executing = false;
+                    return;
+                }
+                const body = {
+                    type: 2,
+                    application_id: userInfo.appID,
+                    guild_id: userInfo.guildID,
+                    channel_id: userInfo.channelID,
+                    session_id: 0,
+                    data: ipfw
+                }
+                await axios.post("https://discord.com/api/v9/interactions", body, { headers });
             }
-            if (ipfw == null) {
-                DDNS.executing = false;
-                return;
-            }
-            const body = {
-                type: 2,
-                application_id: userInfo.appID,
-                guild_id: userInfo.guildID,
-                channel_id: userInfo.channelID,
-                session_id: 0,
-                data: ipfw
-            }
-            await axios.post("https://discord.com/api/v9/interactions", body, { headers });
+        } finally {
+            DDNS.executing = false;
         }
-        DDNS.executing = false;
     },
     /**
      * @param {string} newIP

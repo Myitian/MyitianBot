@@ -84,11 +84,11 @@ client.on(Events.PresenceUpdate, async (oldPresence, presence) => {
     if (presence == null) {
         return;
     }
-    if (oldPresence?.status != presence.status) {
-        log.log(`${presence.user?.displayName ?? presence.user?.globalName ?? presence.user?.username} in ${presence.guild?.name} is ${presence.status}!`);
-    }
     // FurinaServer
     if (presence.user?.id == userInfo.appID) {
+        if (oldPresence?.status != presence.status) {
+            log.log(`${presence.user?.displayName ?? presence.user?.globalName ?? presence.user?.username} in ${presence.guild?.name} is ${presence.status}!`);
+        }
         await triggerDDNS(presence.status);
     }
 })

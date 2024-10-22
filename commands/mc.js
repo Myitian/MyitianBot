@@ -107,13 +107,13 @@ module.exports = {
                     if (data.id) {
                         embeds.push(new EmbedBuilder()
                             .setTitle(data.name)
-                            .setThumbnail(`https://vzge.me/face/512/${data.id}.png?no=ears`)
+                            .setThumbnail(`https://vzge.me/face/512/${data.id}.png?no=ears&nonce=${commandID}`)
                             .addFields(
                                 { name: "UUID", value: data.id },
                             )
-                            .setImage(`https://vzge.me/full/800/${data.id}.png?no=ears`));
+                            .setImage(`https://vzge.me/full/800/${data.id}.png?no=ears&nonce=${commandID}`));
                         embeds.push(new EmbedBuilder()
-                            .setImage(`https://vzge.me/skin/${data.id}.png?no=ears`));
+                            .setImage(`https://vzge.me/skin/${data.id}.png?no=ears&nonce=${commandID}`));
                     }
 
                     log.log(commandID, "Return", JSON.stringify(content), embeds.length);
