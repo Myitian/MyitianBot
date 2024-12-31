@@ -1,5 +1,5 @@
 const { randomInt } = require("node:crypto");
-const axios = require("axios").default;
+const axios = require("axios");
 const log = require("../log");
 
 module.exports = {

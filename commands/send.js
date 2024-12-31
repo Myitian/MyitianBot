@@ -1,8 +1,8 @@
-const { SlashCommandBuilder, escapeMarkdown, CommandInteraction, CommandInteractionOptionResolver, REST, DefaultRestOptions, Routes, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, escapeMarkdown, CommandInteraction, CommandInteractionOptionResolver, REST, DefaultRestOptions, Routes, EmbedBuilder, Attachment, AttachmentBuilder } = require("discord.js");
 const log = require("../log");
 const { token } = require("../config.json")
 const { escapeCSharpString } = require("../utils");
-const axios = require("axios").default;
+const axios = require("axios");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,55 +11,41 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("file")
-                .setDescription("让机器人发送文件")
+                .setDescription("让机器人发送文件（不大于25MiB）")
                 .addAttachmentOption(option =>
-                    option.setName("attachment0")
-                        .setDescription("附件")
-                        .setRequired(true))
-                .addAttachmentOption(option =>
-                    option.setName("attachment1")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment2")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment3")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment4")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment5")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment6")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment7")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment8")
-                        .setDescription("附件"))
-                .addAttachmentOption(option =>
-                    option.setName("attachment9")
+                    option.setName("attachment")
                         .setDescription("附件"))
                 .addStringOption(option =>
+                    option.setName("attachment-link")
+                        .setDescription("附件链接"))
+                .addStringOption(option =>
+                    option.setName("name")
+                        .setDescription("名称"))
+                .addStringOption(option =>
+                    option.setName("description")
+                        .setDescription("简介"))
+                .addBooleanOption(option =>
+                    option.setName("spoiler")
+                        .setDescription("剧透"))
+                .addStringOption(option =>
                     option.setName("text")
-                        .setDescription("文本")))
+                        .setDescription("附加文本")))
         .addSubcommand(subcommand =>
             subcommand
                 .setName("voice")
-                .setDescription("让机器人发送语音消息（要求：OGG/FLAC/WAV/MP3）")
+                .setDescription("让机器人发送语音消息（要求：OGG/FLAC/WAV/MP3，不大于25MiB）")
                 .addAttachmentOption(option =>
                     option.setName("file")
-                        .setDescription("文件")
-                        .setRequired(true))
+                        .setDescription("文件"))
+                .addStringOption(option =>
+                    option.setName("file-link")
+                        .setDescription("文件链接"))
                 .addIntegerOption(option =>
                     option.setName("duration")
                         .setDescription("时长（秒）"))
                 .addStringOption(option =>
                     option.setName("waveform")
-                        .setDescription("波形（Base64编码字节数组）")))
+                        .setDescription("波形预览（Base64编码字节数组）")))
         .addSubcommand(subcommand =>
             subcommand
                 .setName("embed")
@@ -141,23 +127,52 @@ module.exports = {
         log.log("send", subcommand);
         switch (subcommand) {
             case "file":
-                await interaction.deferReply();
-                const content = options.getString("text");
-                const files = [];
-                for (let i = 0; i < 10; i++) {
-                    const attachment = options.getAttachment(`attachment${i}`);
-                    if (attachment != null) {
-                        files.push(attachment);
+                {
+                    await interaction.deferReply();
+                    const content = options.getString("text");
+                    const files = [];
+                    let attachment = options.getAttachment("attachment");
+                    const link = options.getString("attachment-link");
+                    const name = options.getString("name");
+                    const description = options.getString("description");
+                    const spoiler = options.getBoolean("spoiler");
+                    if (attachment == null) {
+                        if (link == null) {
+                            await interaction.editReply({ content: "请至少提供一种文件来源！" });
+                            break;
+                        }
+                        await interaction.editReply({ content: "正在下载附件……" });
+                        const fileResp = await axios.get(link,
+                            {
+                                responseType: "arraybuffer"
+                            }
+                        );
+                        attachment = new AttachmentBuilder(fileResp);
                     }
+                    if (name != null) {
+                        attachment.name = name;
+                    }
+                    if (description != null) {
+                        attachment.description = description;
+                    }
+                    if (spoiler != null) {
+                        attachment.spoiler = spoiler;
+                    }
+                    files.push(attachment);
+                    await interaction.editReply({ content: content, files: files });
                 }
-                await interaction.editReply({ content: content, files: files });
                 break;
             case "voice":
                 await interaction.reply({ content: "正在准备……", ephemeral: true });
                 const attachment = options.getAttachment("file");
+                const attachmentLink = options.getString("file-link");
                 const duration = options.getInteger("duration");
                 const waveform = options.getString("waveform");
                 const rest = new REST().setToken(token);
+                if (attachment == null && attachmentLink == null) {
+                    await interaction.editReply({ content: "请至少提供一种文件来源！" });
+                    break;
+                }
 
                 await interaction.editReply("正在获取上传链接……");
                 /** @type {{attachments:{id:number,upload_url:string,upload_filename:string}[]}} */
@@ -177,7 +192,7 @@ module.exports = {
                 );
                 await interaction.editReply("正在下载文件……");
                 const fileResp = await axios.get(
-                    attachment.proxyURL ?? attachment.url,
+                    attachment?.proxyURL ?? attachment?.url ?? attachmentLink,
                     {
                         responseType: "arraybuffer"
                     }
@@ -239,7 +254,18 @@ module.exports = {
                         iconURL: footerIcon
                     })
                 embed.setTimestamp(options.getInteger("timestamp"));
-                embed.addFields({ i })
+                for (let i = 0; i < 3; i++) {
+                    const fieldName = options.getString(`field${i}-name`);
+                    const fieldValue = options.getString(`field${i}-value`);
+                    if (fieldName == null && fieldValue == null)
+                        continue;
+                    const fieldInline = options.getBoolean(`field${i}-inline`);
+                    embed.addFields({
+                        name: fieldName ?? "\u200B",
+                        value: fieldValue ?? "\u200B",
+                        inline: fieldInline ?? false
+                    });
+                }
                 await interaction.editReply({ content: options.getString("text"), embeds: [embed] });
                 break;
         }

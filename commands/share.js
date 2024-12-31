@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, CommandInteraction, CommandInteractionOptionResolver, EmbedBuilder, escapeMarkdown } = require("discord.js");
 const { randomInt } = require("node:crypto");
-const axios = require("axios").default;
+const axios = require("axios");
 const log = require("../log");
 const { getIllustInfo } = require("../apis/pixiv");
 const { getMD, getVID, getMC, getEP } = require("../apis/bilibili");

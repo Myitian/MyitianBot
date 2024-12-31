@@ -1,4 +1,4 @@
-const axios = require("axios").default;
+const axios = require("axios");
 const { JSDOM } = require("jsdom");
 const log = require("../log");
 const { escapeMarkdown, bold, underline, italic, strikethrough } = require("discord.js");

@@ -1,6 +1,6 @@
 const { randomInt } = require("node:crypto");
 const log = require("./log");
-const axios = require("axios").default;
+const axios = require("axios");
 const { userInfo } = require("./config.json");
 const { updateDns } = require("./apis/cloudflare");
 
@@ -83,8 +83,8 @@ module.exports = {
      * @param {string} newIP
      */
     async updateDDNS(newIP) {
-        newIP = newIP?.trim();
-        if (newIP != DDNS.lastIP) {
+        newIP = newIP?.trim() ?? "";
+        if (/^[0-9a-f:\.]+$/i.test(newIP) && newIP != DDNS.lastIP) {
             await updateDns(newIP);
             DDNS.lastUpdate = new Date();
             DDNS.updated = true;

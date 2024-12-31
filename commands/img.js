@@ -1,6 +1,6 @@
-const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, CommandInteraction } = require("discord.js");
+const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, CommandInteraction, escapeMarkdown } = require("discord.js");
 const { randomInt } = require("node:crypto");
-const axios = require("axios").default;
+const axios = require("axios");
 const lolicon_api_v1 = require("../apis/lolicon-api-v1")
 const anosu = require("../apis/anosu");
 const jitsu = require("../apis/jitsu");
@@ -425,7 +425,7 @@ module.exports = {
                                 { name: "评级", value: rating, inline: true },
                                 { name: "评分", value: info.score.toString(), inline: true },
                                 { name: "原图分辨率", value: `${info.width}x${info.height}`, inline: true },
-                                { name: "标签", value: info.tags }
+                                { name: "标签", value: escapeMarkdown(info.tags) }
                             )
                             .setTimestamp(new Date(info.updated_at * 1000)));
                     }

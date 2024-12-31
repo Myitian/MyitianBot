@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, AttachmentBuilder, CommandInteraction } = require("discord.js");
 const { randomInt } = require("node:crypto");
-const axios = require("axios").default;
+const axios = require("axios");
 const log = require("../log");
 const slp = require("../minecraft/slp")
 const text_component = require("../minecraft/text-component")
@@ -57,18 +57,21 @@ module.exports = {
                     try {
                         log.log(commandID, host, port);
                         const info = await slp.serverListPing(host, port);
-                        const favicon = Buffer.from(info.favicon.split(",")[1], "base64");
-                        files.push(new AttachmentBuilder(favicon)
-                            .setName("favicon.png"));
-                        embeds.push(new EmbedBuilder()
+                        const builder = new EmbedBuilder()
                             .setTitle(text_component.asString(info.version.name))
-                            .setThumbnail("attachment://favicon.png")
                             .setDescription(text_component.asString(info.description))
                             .addFields(
-                                { name: "协议版本", value: info.version.protocol.toString(), inline: true },
-                                { name: "玩家", value: `${info.players.online}/${info.players.max}`, inline: true },
+                                { name: "协议版本", value: info.version?.protocol.toString(), inline: true },
+                                { name: "玩家", value: `${info.players?.online}/${info.players?.max}`, inline: true },
                                 { name: "地址", value: (rawPort === null || rawPort === undefined || Number.isNaN(rawPort)) ? rawHost : `${rawHost}:${rawPort}`, inline: true }
-                            ));
+                            );
+                        if (info.favicon) {
+                            const favicon = Buffer.from(info.favicon.split(",")[1], "base64");
+                            files.push(new AttachmentBuilder(favicon)
+                                .setName("favicon.png"));
+                            builder.setThumbnail("attachment://favicon.png")
+                        }
+                        embeds.push(builder);
                     } catch (e) {
                         content = "无法解析或连接服务器";
                         if (e?.response?.data)

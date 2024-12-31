@@ -1,4 +1,4 @@
-const axios = require("axios").default;
+const axios = require("axios");
 const log = require("../log");
 const address_resolver = require("./address-resolver");
 const { webSLP } = require("../config.json");

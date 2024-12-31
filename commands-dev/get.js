@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, escapeMarkdown, CommandInteractionOptionResolver, CommandInteraction } = require("discord.js");
-const axios = require("axios").default;
+const axios = require("axios");
 const log = require("../log");
 
 module.exports = {

@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, CommandInteractionOptionResolver, CommandInteraction } = require("discord.js");
 const log = require("../log");
-const { sharedData, triggerDDNS } = require("../utils");
+const { sharedData, triggerDDNS, updateDDNS } = require("../utils");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -30,7 +30,10 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("ddns")
-                .setDescription("DDNS")),
+                .setDescription("DDNS")
+                .addStringOption(option =>
+                    option.setName("ip")
+                        .setDescription("IP"))),
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
         await interaction.deferReply();
@@ -55,7 +58,12 @@ module.exports = {
                 break;
             case "ddns":
                 {
-                    await triggerDDNS();
+                    const ip = options.getString("ip");
+                    if (ip == null) {
+                        await triggerDDNS();
+                    } else {
+                        await updateDDNS(ip);
+                    }
                     await interaction.editReply("已发送请求");
                 }
                 break;

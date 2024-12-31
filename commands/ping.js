@@ -9,10 +9,10 @@ module.exports = {
 	/** @param {CommandInteraction} interaction */
 	async execute(interaction) {
 		log.log("ping");
-		const create = interaction.createdAt;
-		const resp = await interaction.reply("Pong!");
-		const latency = resp.createdAt - create
-		const time = formatDateTime(new Date());
+		await interaction.reply("Pong!");
+		const now = new Date();
+		const latency = now - interaction.createdAt;
+		const time = formatDateTime(now);
 		await interaction.editReply(`Pong! ${latency}ms\n${time} (UTC+8)`);
 	},
 };
