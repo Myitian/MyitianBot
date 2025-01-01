@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { Client, Collection, Events, GatewayIntentBits, Partials, MessageCreateOptions, MessageType } = require("discord.js");
+const { Client, Collection, Events, GatewayIntentBits, Partials, MessageType } = require("discord.js");
 const { token, userInfo } = require("./config.json");
 const { deployCommands } = require("./deploy-commands");
 const log = require("./log");
@@ -26,7 +26,7 @@ const client = new Client({
     ]
 })
 
-client.commands = new Collection();
+const commands = new Collection();
 
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
@@ -35,7 +35,7 @@ for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
-        client.commands.set(command.data.name, command);
+        commands.set(command.data.name, command);
     } else {
         log.warn(`位于 ${filePath} 缺失必要的 "data" 或 "execute" 属性。`);
     }
@@ -48,7 +48,7 @@ for (const file of commandDevFiles) {
     const filePath = path.join(commandsDevPath, file);
     const command = require(filePath);
     if ("data" in command && "execute" in command) {
-        client.commands.set(command.data.name, command);
+        commands.set(command.data.name, command);
     } else {
         log.warn(`位于 ${filePath} 缺失必要的 "data" 或 "execute" 属性。`);
     }
@@ -56,7 +56,7 @@ for (const file of commandDevFiles) {
 
 client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isChatInputCommand()) {
-        const command = interaction.client.commands.get(interaction.commandName);
+        const command = commands.get(interaction.commandName);
         if (!command) {
             log.error(`未找到匹配 ${interaction.commandName} 的命令。`);
             return;
@@ -86,9 +86,6 @@ client.on(Events.PresenceUpdate, async (oldPresence, presence) => {
     }
     // FurinaServer
     if (presence.user?.id == userInfo.appID) {
-        if (oldPresence?.status != presence.status) {
-            log.log(`${presence.user?.displayName ?? presence.user?.globalName ?? presence.user?.username} in ${presence.guild?.name} is ${presence.status}!`);
-        }
         await triggerDDNS(presence.status);
     }
 })

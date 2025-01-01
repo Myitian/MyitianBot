@@ -157,9 +157,10 @@ module.exports = {
         return null;
     },
     /**
-     * @param {string|number} mdid
+     * @param {string|number} epid
      * @param {boolean|undefined} isCheese 
      * @returns {Promise<{
+     *          failed:false,
      *          isCheese:boolean,
      *          code:number,
      *          message:string,
@@ -177,7 +178,11 @@ module.exports = {
      *          coin:number,
      *          favorite:number,
      *          typeName:string
-     *      }?>}
+     *      }|{
+     *          failed:true,
+     *          code:number,
+     *          message:string
+     *      }>}
      */
     async getEP(epid, isCheese = undefined) {
         while (!isCheese) {
@@ -192,7 +197,7 @@ module.exports = {
             })).data;
             if (info.code) {
                 if (isCheese === false)
-                    return { code: info.code, message: info.message };
+                    return { failed: true, code: info.code, message: info.message };
                 break;
             }
             log.log("Requesting", jsonUrl2);
@@ -216,6 +221,7 @@ module.exports = {
             })).data;
             function extractData(ep) {
                 return {
+                    failed: false,
                     isCheese: false,
                     code: info.code,
                     message: info.message,
@@ -248,9 +254,6 @@ module.exports = {
                 }
             }
             return null;
-        }
-        if (isCheese !== false) {
-
         }
         return null;
     }

@@ -1,8 +1,8 @@
-const { SlashCommandBuilder, CommandInteraction, CommandInteractionOptionResolver, EmbedBuilder, escapeMarkdown } = require("discord.js");
+const { SlashCommandBuilder, CommandInteraction, CommandInteractionOptionResolver, EmbedBuilder, escapeMarkdown, GuildChannel, BaseGuildTextChannel } = require("discord.js");
 const { randomInt } = require("node:crypto");
 const axios = require("axios");
 const log = require("../log");
-const { getIllustInfo } = require("../apis/pixiv");
+const { getIllustInfo, getUserInfo, getImageURL } = require("../apis/pixiv");
 const { getMD, getVID, getMC, getEP } = require("../apis/bilibili");
 const { formatDateTime, durationToString } = require("../utils");
 
@@ -163,7 +163,7 @@ async function processEP(returnType, epid, isCheese = undefined) {
     const info = await getEP(epid, isCheese);
     if (!info) {
         return null;
-    } else if (info.code) {
+    } else if (info.code || info.failed === true) {
         return info.code === -404 ? null : info.message;
     }
     if (!info.isCheese) {
@@ -249,6 +249,7 @@ module.exports = {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
         const returnType = options.getString("return");
         const subcommand = options.getString("source");
@@ -329,6 +330,9 @@ module.exports = {
                 break;
             case "pixiv":
                 {
+                    /** @type {BaseGuildTextChannel} */
+                    // @ts-ignore
+                    const channel = interaction.channel;
                     const id = options.getString("id").trim();
 
                     let content = null;
@@ -337,7 +341,7 @@ module.exports = {
                     const info = await getIllustInfo(id);
                     if (!info)
                         content = "无效的ID！正确格式：\n`\\d+`\n`\\d+_p\\d+`\n`\\d+-\\d+";
-                    else if (info.r18Type !== 0 && !interaction.channel.nsfw) {
+                    else if (info.r18Type !== "全年龄" && !channel.nsfw) {
                         content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
                     } else {
                         if (info.p < 0)
@@ -345,58 +349,69 @@ module.exports = {
                         else if (info.p >= info.pageCount)
                             info.p = info.pageCount - 1;
 
-                        const imgURL = info.pageCount === 1 ?
-                            `https://pixiv.re/${info.pid}.png` :
-                            `https://pixiv.re/${info.pid}-${info.p + 1}.png`;
-                        const authorAvaterURL = new URL(info.authorAvater);
-                        authorAvaterURL.host = "i.pixiv.re";
+                        const user = await getUserInfo(info.authorId);
+
                         const description = lengthLimiter(info.description.trim());
                         const tags = lengthLimiter(info.tags.join(" "));
 
-                        log.log(commandID, "Pixiv", info.pid, info.p, imgURL);
+                        const avaterURL = user.body.image.replace("pximg.net", "pixiv.cat");
+                        const imageURL = (await getImageURL(info.pid, info.p))?.replace("pximg.net", "pixiv.cat");
+                        log.log(commandID, "Pixiv", info.pid, info.p, imageURL);
 
                         let builder = new EmbedBuilder()
                             .setTitle(info.title)
                             .setURL(`https://www.pixiv.net/artworks/${info.pid}`)
-                            .setAuthor({ name: info.authorName, iconURL: authorAvaterURL.toString(), url: `https://www.pixiv.net/users/${info.authorId}` })
+                            .setAuthor({ name: user.body.name, iconURL: avaterURL.toString(), url: `https://www.pixiv.net/users/${info.authorId}` })
                             .setTimestamp(info.time);
                         switch (returnType) {
                             case "lite":
-                                builder.setThumbnail(imgURL)
-                                    .addFields(
-                                        { name: "PID + P", value: `${info.pid}_p${info.p}`, inline: true },
-                                        { name: "是否AI", value: info.aiType, inline: true },
-                                        { name: "分级", value: info.r18Type, inline: true },
-                                        { name: "标签", value: tags }
-                                    )
+                                if (imageURL) {
+                                    builder.setThumbnail(imageURL);
+                                } else {
+                                    builder.setFooter({ text: "图像服务异常" });
+                                }
+                                builder.addFields(
+                                    { name: "PID + P", value: `${info.pid}_p${info.p}`, inline: true },
+                                    { name: "是否AI", value: info.aiType, inline: true },
+                                    { name: "分级", value: info.r18Type, inline: true },
+                                    { name: "标签", value: tags }
+                                )
                                 if (description)
                                     builder.setDescription(lengthLimiter(description, 60));
                                 break;
                             case "details":
-                                builder.setImage(imgURL)
-                                    .addFields(
-                                        { name: "类型", value: info.illustType, inline: true },
-                                        { name: "是否AI", value: info.aiType, inline: true },
-                                        { name: "分级", value: info.r18Type, inline: true },
-                                        { name: "标签", value: tags },
-                                        { name: "PID", value: info.pid, inline: true },
-                                        { name: "P", value: info.p.toString(), inline: true },
-                                        { name: "浏览量", value: info.viewCount.toString(), inline: true },
-                                        { name: "点赞量", value: info.likeCount.toString(), inline: true },
-                                        { name: "收藏量", value: info.bookmarkCount.toString(), inline: true },
-                                        { name: "评论量", value: info.commentCount.toString(), inline: true }
-                                    )
+                                if (imageURL) {
+                                    builder.setImage(imageURL);
+                                } else {
+                                    builder.setFooter({ text: "图像服务异常" });
+                                }
+                                builder.addFields(
+                                    { name: "类型", value: info.illustType, inline: true },
+                                    { name: "是否AI", value: info.aiType, inline: true },
+                                    { name: "分级", value: info.r18Type, inline: true },
+                                    { name: "标签", value: tags },
+                                    { name: "PID", value: info.pid, inline: true },
+                                    { name: "P", value: info.p.toString(), inline: true },
+                                    { name: "浏览量", value: info.viewCount.toString(), inline: true },
+                                    { name: "点赞量", value: info.likeCount.toString(), inline: true },
+                                    { name: "收藏量", value: info.bookmarkCount.toString(), inline: true },
+                                    { name: "评论量", value: info.commentCount.toString(), inline: true }
+                                )
                                 if (description)
                                     builder.setDescription(lengthLimiter(description));
                                 break;
                             default:
-                                builder.setImage(imgURL)
-                                    .addFields(
-                                        { name: "PID + P", value: `${info.pid}_p${info.p}`, inline: true },
-                                        { name: "是否AI", value: info.aiType, inline: true },
-                                        { name: "分级", value: info.r18Type, inline: true },
-                                        { name: "标签", value: tags }
-                                    )
+                                if (imageURL) {
+                                    builder.setImage(imageURL);
+                                } else {
+                                    builder.setFooter({ text: "图像服务异常" });
+                                }
+                                builder.addFields(
+                                    { name: "PID + P", value: `${info.pid}_p${info.p}`, inline: true },
+                                    { name: "是否AI", value: info.aiType, inline: true },
+                                    { name: "分级", value: info.r18Type, inline: true },
+                                    { name: "标签", value: tags }
+                                )
                                 if (description)
                                     builder.setDescription(lengthLimiter(description, 80));
                                 break;

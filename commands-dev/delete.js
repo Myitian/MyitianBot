@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, escapeMarkdown, CommandInteractionOptionResolver, CommandInteraction, Message, TextBasedChannel } = require("discord.js");
+const { SlashCommandBuilder, escapeMarkdown, CommandInteractionOptionResolver, CommandInteraction, Message } = require("discord.js");
 const axios = require("axios");
 const log = require("../log");
 
@@ -17,6 +17,7 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
         const id = options.getString("id");
         const channel = options.getString("channel");
@@ -28,7 +29,8 @@ module.exports = {
                 const channels = await gulid.channels.fetch();
                 for (const it of channels) {
                     try {
-                        /** @type {TextBasedChannel} */
+                        /** @type {import("discord.js").TextBasedChannel} */
+                        // @ts-ignore
                         const channel = await it[1].fetch();
                         log.log("Check Channel", channel.id);
                         /** @type {Message?} */
@@ -45,7 +47,8 @@ module.exports = {
             await interaction.editReply("未找到消息！");
         } else {
             log.log("Delete", id, "from", channel);
-            /** @type {TextBasedChannel} */
+            /** @type {import("discord.js").TextBasedChannel} */
+            // @ts-ignore
             const channelObj = await interaction.client.channels.fetch(channel);
             if (channelObj === null) {
                 await interaction.editReply("未找到频道！");

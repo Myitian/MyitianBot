@@ -17,7 +17,7 @@ module.exports = {
      *          width:number,
      *          height:number,
      *          tags:string[],
-     *          url:string}[]}>}
+     *          url:string}[]>}
      */
     async getJson(r18 = undefined, keyword = undefined, num = undefined, db = undefined) {
         const search = new URLSearchParams();

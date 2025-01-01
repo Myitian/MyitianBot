@@ -4,7 +4,7 @@ const { sharedData, triggerDDNS, updateDDNS } = require("../utils");
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("set-bot")
+        .setName("set")
         .setDescription("set bot status")
         .addSubcommand(subcommand =>
             subcommand
@@ -38,12 +38,14 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         switch (subcommand) {
             case "status":
                 {
                     const status = options.getString("value");
+                    // @ts-ignore
                     interaction.client.user.setStatus(status);
                     await interaction.editReply(status);
                 }

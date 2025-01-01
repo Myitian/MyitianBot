@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, escapeMarkdown, CommandInteraction, CommandInteractionOptionResolver, REST, DefaultRestOptions, Routes, EmbedBuilder, Attachment, AttachmentBuilder } = require("discord.js");
 const log = require("../log");
 const { token } = require("../config.json")
-const { escapeCSharpString } = require("../utils");
+const { escapeCSharpString, getFile } = require("../utils");
 const axios = require("axios");
 
 module.exports = {
@@ -122,6 +122,7 @@ module.exports = {
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         log.log("send", subcommand);
@@ -131,6 +132,7 @@ module.exports = {
                     await interaction.deferReply();
                     const content = options.getString("text");
                     const files = [];
+                    /** @type {Attachment|AttachmentBuilder} */
                     let attachment = options.getAttachment("attachment");
                     const link = options.getString("attachment-link");
                     const name = options.getString("name");
@@ -141,22 +143,18 @@ module.exports = {
                             await interaction.editReply({ content: "请至少提供一种文件来源！" });
                             break;
                         }
-                        await interaction.editReply({ content: "正在下载附件……" });
-                        const fileResp = await axios.get(link,
-                            {
-                                responseType: "arraybuffer"
-                            }
-                        );
-                        attachment = new AttachmentBuilder(fileResp);
+                        await interaction.editReply({ content: "正在下载文件……" });
+                        const fileResp = await getFile(link, "file");
+                        attachment = new AttachmentBuilder(fileResp.data).setName(fileResp.name);
+                        if (spoiler != null) {
+                            attachment.setSpoiler(spoiler);
+                        }
                     }
                     if (name != null) {
                         attachment.name = name;
                     }
                     if (description != null) {
                         attachment.description = description;
-                    }
-                    if (spoiler != null) {
-                        attachment.spoiler = spoiler;
                     }
                     files.push(attachment);
                     await interaction.editReply({ content: content, files: files });
@@ -165,7 +163,7 @@ module.exports = {
             case "voice":
                 await interaction.reply({ content: "正在准备……", ephemeral: true });
                 const attachment = options.getAttachment("file");
-                const attachmentLink = options.getString("file-link");
+                let attachmentLink = options.getString("file-link");
                 const duration = options.getInteger("duration");
                 const waveform = options.getString("waveform");
                 const rest = new REST().setToken(token);
@@ -173,9 +171,19 @@ module.exports = {
                     await interaction.editReply({ content: "请至少提供一种文件来源！" });
                     break;
                 }
-
+                await interaction.editReply("正在下载文件……");
+                let filename = null;
+                let file_size = -1;
+                if (attachment != null) {
+                    attachmentLink = attachment.proxyURL ?? attachment.url;
+                    filename = attachment.name;
+                    file_size = attachment.size;
+                }
+                
+                const fileResp = await getFile(attachmentLink, "voice.ogg");
                 await interaction.editReply("正在获取上传链接……");
                 /** @type {{attachments:{id:number,upload_url:string,upload_filename:string}[]}} */
+                // @ts-ignore
                 const resp = await rest.post(
                     `/channels/${interaction.channel.id}/attachments`,
                     {
@@ -183,18 +191,11 @@ module.exports = {
                             files: [
                                 {
                                     id: 2,
-                                    filename: attachment.name,
-                                    file_size: attachment.size
+                                    filename: fileResp.name,
+                                    file_size: fileResp.data.byteLength
                                 }
                             ]
                         }
-                    }
-                );
-                await interaction.editReply("正在下载文件……");
-                const fileResp = await axios.get(
-                    attachment?.proxyURL ?? attachment?.url ?? attachmentLink,
-                    {
-                        responseType: "arraybuffer"
                     }
                 );
                 await interaction.editReply("正在上传文件……");
@@ -217,7 +218,7 @@ module.exports = {
                             attachments: [
                                 {
                                     id: "0",
-                                    filename: attachment.name,
+                                    filename: attachment?.name ?? fileResp.name,
                                     uploaded_filename: resp.attachments[0].upload_filename,
                                     duration_secs: duration ?? 0,
                                     waveform: waveform ?? "AA=="
@@ -230,6 +231,7 @@ module.exports = {
             case "embed":
                 await interaction.deferReply();
                 const embed = new EmbedBuilder();
+                // @ts-ignore
                 embed.setColor(options.getString("color"));
                 const authorName = options.getString("author-name");
                 const authorIcon = options.getString("author-icon");

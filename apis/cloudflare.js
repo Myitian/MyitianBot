@@ -9,28 +9,34 @@ const headers = {
 };
 const idCache = {};
 
+/**
+ * @param {string} endpoint
+ */
 async function getID(endpoint) {
-    try {
-        // Check if the result is already in the cache
-        if (idCache[endpoint]) {
-            return idCache[endpoint];
-        }
-        // Make a request if not in cache
-        const response = await axios.get(`${apiUrl}${endpoint}`, { headers });
-        const dataId = response.data.result[0].id;
-        log.log(`${endpoint} id was successfully get ${dataId}`);
-        // Store the result in the cache
-        idCache[endpoint] = dataId;
-
-        return dataId;
-    } catch (error) {
-        throw new Error(`An error occurred on get id of ${endpoint}:`, error);
+    // Check if the result is already in the cache
+    if (idCache[endpoint]) {
+        return idCache[endpoint];
     }
+    // Make a request if not in cache
+    const response = await axios.get(`${apiUrl}${endpoint}`, { headers });
+    const dataId = response.data.result[0].id;
+    log.log(`${endpoint} id was successfully get ${dataId}`);
+    // Store the result in the cache
+    idCache[endpoint] = dataId;
+
+    return dataId;
 }
+/**
+ * @param {string} domain
+ */
 async function getZoneID(domain) {
     const ZoneID = await getID(`/zones/?name=${domain}`)
     return ZoneID
 }
+/**
+ * @param {string} domain
+ * @param {string} subdomain
+ */
 async function getRecordID(domain, subdomain) {
     const zoneID = await getZoneID(domain);
     const recordID = await getID(`/zones/${zoneID}/dns_records?name=${subdomain}`);

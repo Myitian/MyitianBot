@@ -17,5 +17,8 @@
       "www.example.com",
       "@.example.com"
     ]
+  },
+  "pixiv": {
+    "refreshTokens": ["refreshToken from pixiv_auth.py"]
   }
 }

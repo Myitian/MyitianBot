@@ -127,10 +127,11 @@ module.exports = {
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
         await interaction.reply("正在查询……");
         const host = options.getString("host");
-        /** @type {"A"|"AAAA"|"ANY"|"CAA"|"CNAME"|"NAPTR"|"NS"|"MX"|"PTR"|"SOA"|"SRV"|"TXT"|null} */
+        /** @type {"A"|"AAAA"|"ANY"|"CAA"|"CNAME"|"NAPTR"|"NS"|"MX"|"PTR"|"SOA"|"SRV"|"TXT"|null|string} */
         const type = options.getString("type");
         log.log("nslookup", type, host);
         let result = "无结果";

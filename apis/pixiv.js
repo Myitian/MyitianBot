@@ -1,8 +1,147 @@
 const axios = require("axios");
 const { JSDOM } = require("jsdom");
+const crypto = require('crypto');
+const qs = require('qs');
 const log = require("../log");
+const { pixiv } = require("../config.json");
 const { escapeMarkdown, bold, underline, italic, strikethrough } = require("discord.js");
 
+
+///////////////////////////////////////////////////////////////////////// pixiv cat
+const AUTH_TOKEN_URL = 'https://oauth.secure.pixiv.net/auth/token';
+const pixivAuth = pixiv.refreshTokens.map((/** @type {string} */ token) => ({
+    refreshToken: token,
+    accessToken: '',
+    expireTimestamp: 0,
+    refreshing: false,
+}));
+let currentTokenIndex = 0;
+
+const maskHeader = {
+    'App-OS': 'ios',
+    'App-OS-Version': '10.3.1',
+    'App-Version': '6.7.1',
+    'User-Agent': 'PixivIOSApp/6.7.1 (iOS 10.3.1; iPhone8,1)',
+};
+
+/**
+ * @param {string} refreshToken
+ */
+async function refreshAccessToken(refreshToken) {
+    const localTime = `${new Date().toISOString().replace(/\..+/, '')}+00:00`;
+    const response = await axios({
+        method: 'post',
+        url: AUTH_TOKEN_URL,
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Client-Time': localTime,
+            'X-Client-Hash': crypto.createHash('md5').update(`${localTime}28c1fdd170a5204386cb1313c7077b34f83e4aaf4aa829ce78c231e05b0bae2c`).digest('hex'),
+            ...maskHeader,
+        },
+        data: qs.stringify({
+            client_id: 'MOBrBDS8blbauoSck0ZfDbtuzpyT',
+            client_secret: 'lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj',
+            get_secure_url: 1,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+        }),
+    });
+    return response.data.response;
+};
+
+function getAccessTokenIndex() {
+    // Rotate index
+    currentTokenIndex = (currentTokenIndex + 1) % pixivAuth.length;
+    return currentTokenIndex;
+};
+
+async function getAccessToken() {
+    const tokenIndex = getAccessTokenIndex();
+
+    if (pixivAuth[tokenIndex].expireTimestamp < Date.now()) {
+        if (!pixivAuth[tokenIndex].refreshing) {
+            // Set the refreshing flag to indicate that a refresh is in progress
+            pixivAuth[tokenIndex].refreshing = true;
+
+            try {
+                const refreshRes = await refreshAccessToken(pixivAuth[tokenIndex].refreshToken);
+                pixivAuth[tokenIndex].accessToken = refreshRes.access_token;
+                pixivAuth[tokenIndex].refreshToken = refreshRes.refresh_token;
+                pixivAuth[tokenIndex].expireTimestamp = Date.now() + (refreshRes.expires_in * 0.9) * 1000;
+                log.log(`Pixiv access token[${tokenIndex}] refreshed`);
+            } catch (err) {
+                log.warn('Pixiv refresh token failed.', err);
+            } finally {
+                // Reset the refreshing flag when the refresh is completed (whether successful or not)
+                pixivAuth[tokenIndex].refreshing = false;
+            }
+        } else {
+            // If another refresh is already in progress, wait for its completion
+            await new Promise((resolve) => {
+                const interval = setInterval(() => {
+                    if (!pixivAuth[tokenIndex].refreshing) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+    }
+
+    return pixivAuth[tokenIndex].accessToken;
+};
+
+const PIXIV_BASE_URL = 'https://app-api.pixiv.net/v1';
+
+/**
+ * @param {string} pid
+ */
+async function getPixivIllustIdData(pid) {
+    try {
+        log.log('Fetching Pixiv API data for illust ID:', pid);
+        const response = await axios.get(`${PIXIV_BASE_URL}/illust/detail?illust_id=${pid}`, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${await getAccessToken()}`,
+                ...maskHeader,
+            },
+            validateStatus: (status) => (status >= 200 && status < 300) || status === 404,
+        });
+        return response.data;
+    } catch (error) {
+        if (error.response.status === 403 && error.response.data && error.response.data.error && error.response.data.error.message === 'Rate Limit') {
+            // API Rate limit exceeded
+            throw new Error('Pixiv API rate limit exceeded.');
+        } else {
+            // Other errors
+            log.error('Pixiv service error:', error);
+            throw new Error('Pixiv API request failed');
+        }
+    }
+};
+///////////////////////////////////////////////////////////////////////// pixiv cat
+
+/** @typedef {{
+ *  error:boolean,
+ *  message:string,
+ *  body:{
+ *      userId: string,
+ *      name: string,
+ *      image: string,
+ *      imageBig: string
+ *  }}} UserInfo 
+ */
+/** @typedef {{
+ *  urls:{
+ *      thumb_mini:string,
+ *      small:string,
+ *      regular:string,
+ *      original:string
+ *  },
+ *  width:number,
+ *  height:number
+ *  }} PageInfo 
+ */
 module.exports = {
     /**
      * @param {string} pid
@@ -21,9 +160,7 @@ module.exports = {
      *    bookmarkCount: number,
      *    commentCount: number,
      *    time: Date,
-     *    authorId: string,
-     *    authorName: string,
-     *    authorAvater: string}?>}
+     *    authorId: string}?>}
      */
     async getIllustInfo(pid) {
         const type0 = /\d+/;
@@ -49,42 +186,57 @@ module.exports = {
             return null;
         } while (false);
 
-        const url = `https://www.pixiv.net/artworks/${pid}`;
-        log.log("Requesting", url);
-        const dom = await JSDOM.fromURL(url);
-        const metaElement = dom.window.document.getElementById("meta-preload-data");
-        if (!metaElement){
-            dom.window.close();
-            return null;
-        }
-        const meta = JSON.parse(metaElement.content);
-        dom.window.close();
-        const illust = meta.illust[Object.keys(meta.illust)[0]];
-        const user = meta.user[Object.keys(meta.user)[0]];
+        const iUrl = `https://www.pixiv.net/ajax/illust/${pid}`;
+        log.log("Requesting", iUrl);
+        /** @type {{
+            error:boolean,
+            message:string,
+            body:{
+                aiType:number,
+                createDate:string,
+                description:string,
+                id:string,
+                illustType:number,
+                tags:{
+                    tags:{
+                        tag:string
+                    }[]
+                },
+                title:string,
+                uploadDate:string,
+                userId:string,
+                xRestrict:number,
+                pageCount:number,
+                viewCount:number,
+                likeCount:number,
+                bookmarkCount:number,
+                commentCount:number
+            }
+        }} */
+        const illust = (await axios.get(iUrl, { responseType: "json" })).data;
 
         let illustType = "";
-        if (illust.illustType === 0)
+        if (illust.body.illustType === 0)
             illustType = "插画";
-        else if (illust.illustType === 1)
+        else if (illust.body.illustType === 1)
             illustType = "漫画";
 
         let aiType = "未知";
-        if (illust.aiType === 1)
+        if (illust.body.aiType === 1)
             aiType = "否";
-        else if (illust.aiType === 2)
+        else if (illust.body.aiType === 2)
             aiType = "是";
 
         let r18Type = "全年龄";
-        if (illust.xRestrict === 1)
+        if (illust.body.xRestrict === 1)
             r18Type = "R-18";
-        else if (illust.xRestrict === 2)
+        else if (illust.body.xRestrict === 2)
             r18Type = "R-18G";
 
         const description = [];
-        const tags = [];
         try {
 
-            const descriptionDOM = new JSDOM(illust.description);
+            const descriptionDOM = new JSDOM(illust.body.description);
             for (const node of descriptionDOM.window.document.body.childNodes) {
                 const text = escapeMarkdown(node.textContent);
                 if (node instanceof descriptionDOM.window.HTMLElement)
@@ -114,10 +266,10 @@ module.exports = {
         } catch (e) {
             log.error(e);
         }
-
+        const tags = [];
         try {
-            for (const tag of illust.tags.tags) {
-                tags.push("#" + tag.tag);
+            for (const tag of illust.body.tags.tags) {
+                tags.push(escapeMarkdown("#" + tag.tag));
             }
         } catch (e) {
             log.error(e);
@@ -125,22 +277,48 @@ module.exports = {
 
         return {
             p: p,
-            pid: illust.id,
-            title: escapeMarkdown(illust.title),
+            pid: illust.body.id,
+            title: illust.body.title,
             description: description.join(""),
             tags: tags,
             illustType: illustType,
             aiType: aiType,
             r18Type: r18Type,
-            pageCount: illust.pageCount,
-            viewCount: illust.viewCount,
-            likeCount: illust.likeCount,
-            bookmarkCount: illust.bookmarkCount,
-            commentCount: illust.commentCount,
-            time: new Date(illust.uploadDate),
-            authorId: user.userId,
-            authorName: user.name,
-            authorAvater: user.image
+            pageCount: illust.body.pageCount,
+            viewCount: illust.body.viewCount,
+            likeCount: illust.body.likeCount,
+            bookmarkCount: illust.body.bookmarkCount,
+            commentCount: illust.body.commentCount,
+            time: new Date(illust.body.uploadDate),
+            authorId: illust.body.userId
         };
+    },
+    /**
+     * @param {string} uid 
+     * @returns {Promise<UserInfo>}>}
+     */
+    async getUserInfo(uid) {
+        const uUrl = `https://www.pixiv.net/ajax/user/${uid}`;
+        log.log("Requesting", uUrl);
+        /** @type {UserInfo} */
+        return (await axios.get(uUrl, { responseType: "json" })).data;
+    },
+    /**
+     * @param {string} pid 
+     * @param {number} p 
+     * @returns {Promise<string>}>}
+     */
+    async getImageURL(pid, p) {
+        try {
+            const pixivApiResponse = await getPixivIllustIdData(pid);
+            if (p == 0) {
+                return pixivApiResponse.illust.meta_single_page?.original_image_url
+                    ?? pixivApiResponse.illust.meta_pages[p].image_urls.original;
+            }
+            return pixivApiResponse.illust.meta_pages[p].image_urls.original;
+        } catch (error) {
+            log.error(error);
+            return null;
+        }
     }
 }

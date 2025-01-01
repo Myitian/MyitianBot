@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, CommandInteraction, escapeMarkdown } = require("discord.js");
+const { SlashCommandBuilder, CommandInteractionOptionResolver, EmbedBuilder, CommandInteraction, escapeMarkdown, BaseGuildTextChannel } = require("discord.js");
 const { randomInt } = require("node:crypto");
 const axios = require("axios");
 const lolicon_api_v1 = require("../apis/lolicon-api-v1")
@@ -179,7 +179,11 @@ module.exports = {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
+        /** @type {BaseGuildTextChannel} */
+        // @ts-ignore
+        const channel = interaction.channel;
         const subcommand = options.getSubcommand();
         switch (subcommand) {
             case "lolicon-api-v1":
@@ -198,7 +202,7 @@ module.exports = {
                     if (response.code === 0 && response.data) {
                         for (const setu of response.data) {
                             log.log(commandID, "Image", setu.url);
-                            if (setu.r18 && !interaction.channel.nsfw) {
+                            if (setu.r18 && !channel.nsfw) {
                                 log.log(commandID, "Filtered");
                                 filteredNSFW++;
                                 continue;
@@ -224,7 +228,7 @@ module.exports = {
                     else if (response.msg)
                         content = response.msg;
 
-                    if (filteredNSFW > 0 && !interaction.channel.nsfw)
+                    if (filteredNSFW > 0 && !channel.nsfw)
                         content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${filteredNSFW}张）。请移步至有年龄限制的频道。`;
 
                     if (!content && !embeds.length)
@@ -265,7 +269,7 @@ module.exports = {
                     if (response.length) {
                         for (const setu of response) {
                             log.log(commandID, "Image", setu.url);
-                            if (setu.r18 && !interaction.channel.nsfw) {
+                            if (setu.r18 && !channel.nsfw) {
                                 log.log(commandID, "Filtered");
                                 filteredNSFW++;
                                 continue;
@@ -286,7 +290,7 @@ module.exports = {
                         }
                     }
 
-                    if (filteredNSFW > 0 && !interaction.channel.nsfw)
+                    if (filteredNSFW > 0 && !channel.nsfw)
                         content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${filteredNSFW}张）。请移步至有年龄限制的频道。`;
 
                     if (!content && !embeds.length)
@@ -304,11 +308,11 @@ module.exports = {
                     let content = null;
                     const embeds = [];
 
-                    if ((sort === "r18" || sort === "!special") && !interaction.channel.nsfw) {
+                    if ((sort === "r18" || sort === "!special") && !channel.nsfw) {
                         content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
                     } else {
                         if (sort === "!special") {
-                            const response = await jitsu.getSpecialR18Json(sort, num);
+                            const response = await jitsu.getSpecialR18Json();
                             if (response.pic) {
                                 log.log(commandID, "Image", response.pic);
                                 embeds.push(new EmbedBuilder()
@@ -411,7 +415,7 @@ module.exports = {
                                 rating = "暴露";
                                 break;
                         }
-                        if (info.rating !== "s" && !interaction.channel.nsfw) {
+                        if (info.rating !== "s" && !channel.nsfw) {
                             log.log(commandID, "Filtered", info.rating);
                             filteredNSFW++;
                             continue;
@@ -430,7 +434,7 @@ module.exports = {
                             .setTimestamp(new Date(info.updated_at * 1000)));
                     }
 
-                    if (filteredNSFW > 0 && !interaction.channel.nsfw)
+                    if (filteredNSFW > 0 && !channel.nsfw)
                         content = `您正在尝试在无年龄限制的频道内访问NSFW内容（已过滤${filteredNSFW}张）。请移步至有年龄限制的频道。`;
 
                     if (!content && !embeds.length)

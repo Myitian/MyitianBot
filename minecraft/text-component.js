@@ -11,17 +11,21 @@ function resolveObject(value) {
         return resolveArray(value);
     }
     const result = [];
+    /** @param {{text:string}} value */
     function text(value) {
         return value.text;
     }
+    /** @param {{fallback:string,translate:string}} value */
     function translatable(value) {
         if (value.fallback !== null || value.fallback !== undefined)
             return value.fallback;
         return value.translate;
     }
+    /** @param {{keybind:string}} value */
     function keybind(value) {
         return value.keybind;
     }
+    /** @param {{type:"text"|"translatable"|"keybind",text:string,fallback:string,translate:string,keybind:string}} value */
     function process(value) {
         switch (value.type) {
             case "text":
@@ -51,7 +55,7 @@ function resolveObject(value) {
     return result.join("");
 }
 /**
- * @param {[]} value
+ * @param {Array} value
  * @returns {string}
  */
 function resolveArray(value) {

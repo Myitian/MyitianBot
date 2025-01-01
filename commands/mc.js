@@ -35,6 +35,7 @@ module.exports = {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
         /** @type {CommandInteractionOptionResolver} */
+        // @ts-ignore
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         switch (subcommand) {
@@ -95,13 +96,13 @@ module.exports = {
                         `https://api.mojang.com/users/profiles/minecraft/${name}`;
                     log.log("Requesting", url);
 
-                    /** @type {{id:string?,name:string?,errorMessage:string?}} */
                     const resp = await axios({
                         method: "get",
                         url: url,
                         responseType: "json",
                         validateStatus: () => true
                     });
+                    /** @type {{id:string?,name:string?,errorMessage:string?}} */
                     const data = resp.data;
 
                     let content = data.errorMessage ? data.errorMessage : null;

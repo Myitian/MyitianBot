@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "target": "ES2021",
+        "checkJs": true,
+        "moduleResolution": "nodenext",
+        "module": "NodeNext",
+        "resolveJsonModule": true
+    }
+}

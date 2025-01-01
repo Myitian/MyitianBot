@@ -1,14 +1,19 @@
+const path = require("node:path");
 const { randomInt } = require("node:crypto");
 const log = require("./log");
 const axios = require("axios");
 const { userInfo } = require("./config.json");
 const { updateDns } = require("./apis/cloudflare");
+const contentDisposition = require("content-disposition");
 
 const dateTimeFormat = new Intl.DateTimeFormat('zh', {
     dateStyle: 'short',
     timeStyle: 'medium',
     timeZone: 'Asia/Shanghai',
 });
+/**
+ * @param {string} char
+ */
 function isHex(char) {
     return !Number.isNaN(parseInt(char, 16));
 }
@@ -24,6 +29,40 @@ module.exports = {
     sharedData: {
     },
     /**
+     * @param {string} url
+     * @param {string} fallbackName
+     * @returns {Promise<{name:string,data:Buffer}>}
+     */
+    async getFile(url, fallbackName) {
+        const fileResp = await axios.get(url, { responseType: "arraybuffer" }
+        );
+        let name = null;
+        const cdHeader = fileResp.headers["Content-Disposition"];
+        if (cdHeader) {
+            const cd = contentDisposition.parse(cdHeader);
+            const cdName = cd.parameters.filename;
+            if (cdName) {
+                name = cdName;
+            }
+        }
+        if (!name && fileResp.request.res?.responseUrl) {
+            const baseName = path.basename(new URL(fileResp.request.res.responseUrl).pathname);
+            if (baseName) {
+                name = baseName;
+            }
+        }
+        if (!name) {
+            const baseName = path.basename(new URL(url).pathname);
+            if (baseName) {
+                name = baseName;
+            }
+        }
+        return {
+            name: name ?? fallbackName,
+            data: fileResp.data
+        };
+    },
+    /**
      * @param {string?} status
      */
     async triggerDDNS(status = null) {
@@ -33,10 +72,11 @@ module.exports = {
         try {
             DDNS.executing = true;
             const now = new Date();
-            const diff = now - DDNS.lastUpdate;
+            const diff = now.getTime() - DDNS.lastUpdate.getTime();
             if (status === "offline") {
                 DDNS.updated = false;
-            } else if ((!DDNS.updated && diff > 5 * 60 * 1000) || diff > 10 * 60 * 1000) {
+            } else if ((!DDNS.updated && diff > 5 * 60 * 1000 * 1000) || diff > 10 * 60 * 1000 * 1000) {
+                log.log("triggerDDNS");
                 const headers = {
                     "Authorization": userInfo.token
                 };
@@ -138,6 +178,9 @@ module.exports = {
         }
         return result;
     },
+    /**
+     * @param {number} bytes
+     */
     fileSizeToString(bytes) {
         if (bytes < 1024) {
             return `${bytes} B`;

@@ -11,7 +11,7 @@ module.exports = {
 		log.log("ping");
 		await interaction.reply("Pong!");
 		const now = new Date();
-		const latency = now - interaction.createdAt;
+		const latency = now.getTime() - interaction.createdAt.getTime();
 		const time = formatDateTime(now);
 		await interaction.editReply(`Pong! ${latency}ms\n${time} (UTC+8)`);
 	},
