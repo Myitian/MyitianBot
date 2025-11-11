@@ -16,8 +16,7 @@ module.exports = {
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
         await interaction.deferReply();
-        /** @type {CommandInteractionOptionResolver} */
-        // @ts-ignore
+        /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const id = options.getString("id");
         const channel = options.getString("channel");
@@ -29,8 +28,7 @@ module.exports = {
                 const channels = await gulid.channels.fetch();
                 for (const it of channels) {
                     try {
-                        /** @type {import("discord.js").TextBasedChannel} */
-                        // @ts-ignore
+                        /** @ts-ignore @type {import("discord.js").TextBasedChannel} */
                         const channel = await it[1].fetch();
                         log.log("Check Channel", channel.id);
                         /** @type {Message?} */
@@ -47,8 +45,7 @@ module.exports = {
             await interaction.editReply("未找到消息！");
         } else {
             log.log("Delete", id, "from", channel);
-            /** @type {import("discord.js").TextBasedChannel} */
-            // @ts-ignore
+            /** @ts-ignore @type {import("discord.js").TextBasedChannel} */
             const channelObj = await interaction.client.channels.fetch(channel);
             if (channelObj === null) {
                 await interaction.editReply("未找到频道！");

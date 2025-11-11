@@ -21,24 +21,9 @@ module.exports = {
             search.set("sort", sort);
         if (num !== null && num !== undefined)
             search.set("num", num.toString());
-
-        const url = "https://moe.jitsu.top/img?" + search.toString();
+        
+        const url = `https://moe.jitsu.top/img?${search}`;
         log.log("Requesting", url);
-
-        const resp = await axios({
-            method: "get",
-            url: url,
-            responseType: "json"
-        });
-        return resp.data;
-    },
-    /**
-     * @returns {Promise<{pic:string}>}
-     */
-    async getSpecialR18Json() {
-        const url = "https://moe.jitsu.top/r18/?type=json";
-        log.log("Requesting", url);
-
         const resp = await axios({
             method: "get",
             url: url,

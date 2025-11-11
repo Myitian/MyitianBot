@@ -11,7 +11,7 @@ module.exports = {
         const commandsPath = path.join(__dirname, "commands");
         const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
         log.log(commandFiles);
-        
+
         for (const file of commandFiles) {
             const filePath = path.join(commandsPath, file);
             const command = require(filePath);
@@ -48,19 +48,19 @@ module.exports = {
 
         const rest = new REST().setToken(token);
 
+
         try {
             log.log(`开始刷新应用命令！`);
-
+            /** @ts-ignore @type {[]} */
             const data = await rest.put(
                 Routes.applicationCommands(clientID),
                 { body: commands },
             );
-
+            /** @ts-ignore @type {[]} */
             const dataDev = await rest.put(
                 Routes.applicationGuildCommands(clientID, guildID),
                 { body: commandsDev },
             );
-
             log.log(`成功刷新 ${data.length}(${dataDev.length} dev) 个应用命令！`);
         } catch (error) {
             log.error(error);

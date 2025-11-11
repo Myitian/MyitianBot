@@ -78,7 +78,7 @@ module.exports = {
                         .setDescription("引用"))),
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
-        /** @type {CommandInteractionOptionResolver} */
+        /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         let content = options.getString("content");

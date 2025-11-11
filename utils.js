@@ -2,8 +2,6 @@ const path = require("node:path");
 const { randomInt } = require("node:crypto");
 const log = require("./log");
 const axios = require("axios");
-const { userInfo } = require("./config.json");
-const { updateDns } = require("./apis/cloudflare");
 const contentDisposition = require("content-disposition");
 
 const dateTimeFormat = new Intl.DateTimeFormat('zh', {
@@ -31,10 +29,24 @@ module.exports = {
     /**
      * @param {string} url
      * @param {string} fallbackName
+     * @param {(string|null|undefined)[]} headers
      * @returns {Promise<{name:string,data:Buffer}>}
      */
-    async getFile(url, fallbackName) {
-        const fileResp = await axios.get(url, { responseType: "arraybuffer" }
+    async getFile(url, fallbackName, headers) {
+        const usedHeaders = {};
+        for (const header of headers) {
+            if (header == null) {
+                continue;
+            }
+            const colon = header.indexOf(":");
+            if (colon == -1) {
+                continue;
+            }
+            const key = header.substring(0, colon).trim();
+            const value = header.substring(colon + 1).trim();
+            usedHeaders[key] = value;
+        }
+        const fileResp = await axios.get(url, { responseType: "arraybuffer", headers: usedHeaders }
         );
         let name = null;
         const cdHeader = fileResp.headers["Content-Disposition"];
@@ -61,75 +73,6 @@ module.exports = {
             name: name ?? fallbackName,
             data: fileResp.data
         };
-    },
-    /**
-     * @param {string?} status
-     */
-    async triggerDDNS(status = null) {
-        if (DDNS.executing) {
-            return;
-        }
-        try {
-            DDNS.executing = true;
-            const now = new Date();
-            const diff = now.getTime() - DDNS.lastUpdate.getTime();
-            if (status === "offline") {
-                DDNS.updated = false;
-            } else if ((!DDNS.updated && diff > 5 * 60 * 1000 * 1000) || diff > 10 * 60 * 1000 * 1000) {
-                log.log("triggerDDNS");
-                const headers = {
-                    "Authorization": userInfo.token
-                };
-                /** @type {{data:{application_commands:{id:string,type:number,version:string,name:string,application_id:string}[]}}} */
-                const commands = await axios({
-                    method: "get",
-                    url: `https://discord.com/api/v10/guilds/${userInfo.guildID}/application-command-index`,
-                    responseType: "json",
-                    headers: headers
-                });
-                /** @type {{id:string,type:number,version:string,name:string}?} */
-                let ipfw = null;
-                for (const command of commands.data.application_commands) {
-                    if (command.name != userInfo.command || command.application_id != userInfo.appID) {
-                        continue;
-                    }
-                    ipfw = {
-                        version: command.version,
-                        id: command.id,
-                        name: command.name,
-                        type: command.type
-                    };
-                    break;
-                }
-                if (ipfw == null) {
-                    DDNS.executing = false;
-                    return;
-                }
-                const body = {
-                    type: 2,
-                    application_id: userInfo.appID,
-                    guild_id: userInfo.guildID,
-                    channel_id: userInfo.channelID,
-                    session_id: 0,
-                    data: ipfw
-                }
-                await axios.post("https://discord.com/api/v9/interactions", body, { headers });
-            }
-        } finally {
-            DDNS.executing = false;
-        }
-    },
-    /**
-     * @param {string} newIP
-     */
-    async updateDDNS(newIP) {
-        newIP = newIP?.trim() ?? "";
-        if (/^[0-9a-f:\.]+$/i.test(newIP) && newIP != DDNS.lastIP) {
-            await updateDns(newIP);
-            DDNS.lastUpdate = new Date();
-            DDNS.updated = true;
-            DDNS.lastIP = newIP;
-        }
     },
     /**
      * @param {number|Date} datetime
@@ -163,12 +106,9 @@ module.exports = {
         }
         const result = new Array(k);
         const remap = {};
+        /** @param {number} i */
         function get(i) {
-            if (i in remap) {
-                return remap[i];
-            } else {
-                return i;
-            }
+            return i in remap ? remap[i] : i;
         }
         for (let i = 0; i < k; i++) {
             const r = randomInt(min, max);

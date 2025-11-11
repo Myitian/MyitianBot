@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, escapeMarkdown, CommandInteraction, CommandInteractionOptionResolver, REST, DefaultRestOptions, Routes, EmbedBuilder, Attachment, AttachmentBuilder } = require("discord.js");
+const { SlashCommandBuilder, escapeMarkdown, CommandInteraction, CommandInteractionOptionResolver, REST, DiscordAPIError, Routes, EmbedBuilder, Attachment, AttachmentBuilder } = require("discord.js");
 const log = require("../log");
 const { token } = require("../config.json")
 const { escapeCSharpString, getFile } = require("../utils");
@@ -11,7 +11,7 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName("file")
-                .setDescription("让机器人发送文件（不大于25MiB）")
+                .setDescription("让机器人发送文件（小于10MiB）")
                 .addAttachmentOption(option =>
                     option.setName("attachment")
                         .setDescription("附件"))
@@ -29,11 +29,23 @@ module.exports = {
                         .setDescription("剧透"))
                 .addStringOption(option =>
                     option.setName("text")
-                        .setDescription("附加文本")))
+                        .setDescription("附加文本"))
+                .addStringOption(option =>
+                    option.setName("ext-header-0")
+                        .setDescription("用于链接的额外请求头0"))
+                .addStringOption(option =>
+                    option.setName("ext-header-1")
+                        .setDescription("用于链接的额外请求头1"))
+                .addStringOption(option =>
+                    option.setName("ext-header-2")
+                        .setDescription("用于链接的额外请求头2"))
+                .addStringOption(option =>
+                    option.setName("ext-header-3")
+                        .setDescription("用于链接的额外请求头3")))
         .addSubcommand(subcommand =>
             subcommand
                 .setName("voice")
-                .setDescription("让机器人发送语音消息（要求：OGG/FLAC/WAV/MP3，不大于25MiB）")
+                .setDescription("让机器人发送语音消息（要求：OGG/FLAC/WAV/MP3，小于10MiB）")
                 .addAttachmentOption(option =>
                     option.setName("file")
                         .setDescription("文件"))
@@ -45,7 +57,19 @@ module.exports = {
                         .setDescription("时长（秒）"))
                 .addStringOption(option =>
                     option.setName("waveform")
-                        .setDescription("波形预览（Base64编码字节数组）")))
+                        .setDescription("波形预览（Base64编码字节数组）"))
+                .addStringOption(option =>
+                    option.setName("ext-header-0")
+                        .setDescription("用于链接的额外请求头0"))
+                .addStringOption(option =>
+                    option.setName("ext-header-1")
+                        .setDescription("用于链接的额外请求头1"))
+                .addStringOption(option =>
+                    option.setName("ext-header-2")
+                        .setDescription("用于链接的额外请求头2"))
+                .addStringOption(option =>
+                    option.setName("ext-header-3")
+                        .setDescription("用于链接的额外请求头3")))
         .addSubcommand(subcommand =>
             subcommand
                 .setName("embed")
@@ -121,155 +145,179 @@ module.exports = {
                         .setDescription("附加文本"))),
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
-        /** @type {CommandInteractionOptionResolver} */
-        // @ts-ignore
+        /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         log.log("send", subcommand);
-        switch (subcommand) {
-            case "file":
-                {
-                    await interaction.deferReply();
-                    const content = options.getString("text");
-                    const files = [];
-                    /** @type {Attachment|AttachmentBuilder} */
-                    let attachment = options.getAttachment("attachment");
-                    const link = options.getString("attachment-link");
-                    const name = options.getString("name");
-                    const description = options.getString("description");
-                    const spoiler = options.getBoolean("spoiler");
-                    if (attachment == null) {
-                        if (link == null) {
-                            await interaction.editReply({ content: "请至少提供一种文件来源！" });
-                            break;
+        try {
+            switch (subcommand) {
+                case "file":
+                    {
+                        await interaction.deferReply();
+                        const content = options.getString("text");
+                        const files = [];
+                        /** @type {Attachment|AttachmentBuilder} */
+                        let attachment = options.getAttachment("attachment");
+                        const link = options.getString("attachment-link");
+                        const name = options.getString("name");
+                        const description = options.getString("description");
+                        const spoiler = options.getBoolean("spoiler");
+                        if (attachment == null) {
+                            if (link == null) {
+                                await interaction.editReply({ content: "请至少提供一种文件来源！" });
+                                break;
+                            }
+                            await interaction.editReply({ content: "正在下载文件……" });
+
+                            const extHeaders = [
+                                options.getString("ext-header-0"),
+                                options.getString("ext-header-1"),
+                                options.getString("ext-header-2"),
+                                options.getString("ext-header-3")
+                            ];
+                            const fileResp = await getFile(link, "file", extHeaders);
+                            attachment = new AttachmentBuilder(fileResp.data).setName(fileResp.name);
+                            if (spoiler != null) {
+                                attachment.setSpoiler(spoiler);
+                            }
                         }
-                        await interaction.editReply({ content: "正在下载文件……" });
-                        const fileResp = await getFile(link, "file");
-                        attachment = new AttachmentBuilder(fileResp.data).setName(fileResp.name);
-                        if (spoiler != null) {
-                            attachment.setSpoiler(spoiler);
+                        if (name != null) {
+                            attachment.name = name;
                         }
+                        if (description != null) {
+                            attachment.description = description;
+                        }
+                        files.push(attachment);
+                        await interaction.editReply({ content: content, files: files });
                     }
-                    if (name != null) {
-                        attachment.name = name;
-                    }
-                    if (description != null) {
-                        attachment.description = description;
-                    }
-                    files.push(attachment);
-                    await interaction.editReply({ content: content, files: files });
-                }
-                break;
-            case "voice":
-                await interaction.reply({ content: "正在准备……", ephemeral: true });
-                const attachment = options.getAttachment("file");
-                let attachmentLink = options.getString("file-link");
-                const duration = options.getInteger("duration");
-                const waveform = options.getString("waveform");
-                const rest = new REST().setToken(token);
-                if (attachment == null && attachmentLink == null) {
-                    await interaction.editReply({ content: "请至少提供一种文件来源！" });
                     break;
-                }
-                await interaction.editReply("正在下载文件……");
-                let filename = null;
-                let file_size = -1;
-                if (attachment != null) {
-                    attachmentLink = attachment.proxyURL ?? attachment.url;
-                    filename = attachment.name;
-                    file_size = attachment.size;
-                }
-                
-                const fileResp = await getFile(attachmentLink, "voice.ogg");
-                await interaction.editReply("正在获取上传链接……");
-                /** @type {{attachments:{id:number,upload_url:string,upload_filename:string}[]}} */
-                // @ts-ignore
-                const resp = await rest.post(
-                    `/channels/${interaction.channel.id}/attachments`,
-                    {
-                        body: {
-                            files: [
-                                {
-                                    id: 2,
-                                    filename: fileResp.name,
-                                    file_size: fileResp.data.byteLength
-                                }
-                            ]
-                        }
+                case "voice":
+                    await interaction.reply({ content: "正在准备……", ephemeral: true });
+                    const attachment = options.getAttachment("file");
+                    let attachmentLink = options.getString("file-link");
+                    const duration = options.getInteger("duration");
+                    const waveform = options.getString("waveform");
+                    const rest = new REST().setToken(token);
+                    if (attachment == null && attachmentLink == null) {
+                        await interaction.editReply({ content: "请至少提供一种文件来源！" });
+                        break;
                     }
-                );
-                await interaction.editReply("正在上传文件……");
-                await axios.put(
-                    resp.attachments[0].upload_url,
-                    fileResp.data,
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bot ${token}`
-                        }
+                    await interaction.editReply("正在下载文件……");
+                    let filename = null;
+                    let file_size = -1;
+                    if (attachment != null) {
+                        attachmentLink = attachment.proxyURL ?? attachment.url;
+                        filename = attachment.name;
+                        file_size = attachment.size;
                     }
-                );
-                await interaction.editReply("正在发送……");
-                await rest.post(
-                    Routes.channelMessages(interaction.channel.id),
-                    {
-                        body: {
-                            flags: 8192,
-                            attachments: [
-                                {
-                                    id: "0",
-                                    filename: attachment?.name ?? fileResp.name,
-                                    uploaded_filename: resp.attachments[0].upload_filename,
-                                    duration_secs: duration ?? 0,
-                                    waveform: waveform ?? "AA=="
-                                }
-                            ]
+                    const extHeaders = [
+                        options.getString("ext-header-0"),
+                        options.getString("ext-header-1"),
+                        options.getString("ext-header-2"),
+                        options.getString("ext-header-3")
+                    ];
+                    const fileResp = await getFile(attachmentLink, "voice.ogg", extHeaders);
+                    await interaction.editReply("正在获取上传链接……");
+                    /** @ts-ignore @type {{attachments:{id:number,upload_url:string,upload_filename:string}[]}} */
+                    const resp = await rest.post(
+                        `/channels/${interaction.channel.id}/attachments`,
+                        {
+                            body: {
+                                files: [
+                                    {
+                                        id: 2,
+                                        filename: fileResp.name,
+                                        file_size: fileResp.data.byteLength
+                                    }
+                                ]
+                            }
                         }
+                    );
+                    await interaction.editReply("正在上传文件……");
+                    await axios.put(
+                        resp.attachments[0].upload_url,
+                        fileResp.data,
+                        {
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bot ${token}`
+                            }
+                        }
+                    );
+                    await interaction.editReply("正在发送……");
+                    await rest.post(
+                        Routes.channelMessages(interaction.channel.id),
+                        {
+                            body: {
+                                flags: 8192,
+                                attachments: [
+                                    {
+                                        id: "0",
+                                        filename: attachment?.name ?? fileResp.name,
+                                        uploaded_filename: resp.attachments[0].upload_filename,
+                                        duration_secs: duration ?? 0,
+                                        waveform: waveform ?? "AA=="
+                                    }
+                                ]
+                            }
+                        }
+                    );
+                    break;
+                case "embed":
+                    await interaction.deferReply();
+                    const embed = new EmbedBuilder();
+                    // @ts-ignore
+                    embed.setColor(options.getString("color"));
+                    const authorName = options.getString("author-name");
+                    const authorIcon = options.getString("author-icon");
+                    if (authorName || authorIcon)
+                        embed.setAuthor({
+                            name: authorName ?? "\u200B",
+                            url: options.getString("author-url"),
+                            iconURL: authorIcon
+                        });
+                    embed.setTitle(options.getString("title"));
+                    embed.setURL(options.getString("url"));
+                    const descEsc = options.getString("description-escaped");
+                    const desc = options.getString("description");
+                    embed.setDescription(descEsc ? escapeCSharpString(descEsc) : desc);
+                    embed.setThumbnail(options.getString("thumbnail"));
+                    embed.setImage(options.getString("image"));
+                    const footerText = options.getString("footer-text");
+                    const footerIcon = options.getString("footer-icon");
+                    if (footerText || footerIcon)
+                        embed.setFooter({
+                            text: footerText ?? "\u200B",
+                            iconURL: footerIcon
+                        })
+                    embed.setTimestamp(options.getInteger("timestamp"));
+                    for (let i = 0; i < 3; i++) {
+                        const fieldName = options.getString(`field${i}-name`);
+                        const fieldValue = options.getString(`field${i}-value`);
+                        if (fieldName == null && fieldValue == null)
+                            continue;
+                        const fieldInline = options.getBoolean(`field${i}-inline`);
+                        embed.addFields({
+                            name: fieldName ?? "\u200B",
+                            value: fieldValue ?? "\u200B",
+                            inline: fieldInline ?? false
+                        });
                     }
-                );
-                break;
-            case "embed":
-                await interaction.deferReply();
-                const embed = new EmbedBuilder();
-                // @ts-ignore
-                embed.setColor(options.getString("color"));
-                const authorName = options.getString("author-name");
-                const authorIcon = options.getString("author-icon");
-                if (authorName || authorIcon)
-                    embed.setAuthor({
-                        name: authorName ?? "\u200B",
-                        url: options.getString("author-url"),
-                        iconURL: authorIcon
-                    });
-                embed.setTitle(options.getString("title"));
-                embed.setURL(options.getString("url"));
-                const descEsc = options.getString("description-escaped");
-                const desc = options.getString("description");
-                embed.setDescription(descEsc ? escapeCSharpString(descEsc) : desc);
-                embed.setThumbnail(options.getString("thumbnail"));
-                embed.setImage(options.getString("image"));
-                const footerText = options.getString("footer-text");
-                const footerIcon = options.getString("footer-icon");
-                if (footerText || footerIcon)
-                    embed.setFooter({
-                        text: footerText ?? "\u200B",
-                        iconURL: footerIcon
-                    })
-                embed.setTimestamp(options.getInteger("timestamp"));
-                for (let i = 0; i < 3; i++) {
-                    const fieldName = options.getString(`field${i}-name`);
-                    const fieldValue = options.getString(`field${i}-value`);
-                    if (fieldName == null && fieldValue == null)
-                        continue;
-                    const fieldInline = options.getBoolean(`field${i}-inline`);
-                    embed.addFields({
-                        name: fieldName ?? "\u200B",
-                        value: fieldValue ?? "\u200B",
-                        inline: fieldInline ?? false
-                    });
+                    await interaction.editReply({ content: options.getString("text"), embeds: [embed] });
+                    break;
+            }
+        } catch (error) {
+            if (error instanceof DiscordAPIError) {
+                switch (error.code) {
+                    case 40005:
+                        await interaction.editReply("文件过大，无法发送。");
+                        return;
+                    case 50160:
+                        await interaction.editReply("附件无效。语音消息必须有一个音频附件。");
+                        return;
                 }
-                await interaction.editReply({ content: options.getString("text"), embeds: [embed] });
-                break;
+            }
+            throw error;
         }
-    },
+    }
 };

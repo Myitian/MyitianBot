@@ -1,10 +1,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits, Partials, MessageType } = require("discord.js");
-const { token, userInfo } = require("./config.json");
+const { token } = require("./config.json");
 const { deployCommands } = require("./deploy-commands");
 const log = require("./log");
-const { triggerDDNS, updateDDNS } = require("./utils");
 
 deployCommands();
 
@@ -79,25 +78,6 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 });
-
-client.on(Events.PresenceUpdate, async (oldPresence, presence) => {
-    if (presence == null) {
-        return;
-    }
-    // FurinaServer
-    if (presence.user?.id == userInfo.appID) {
-        await triggerDDNS(presence.status);
-    }
-})
-
-client.on(Events.MessageUpdate, async (_, message) => {
-    // FurinaServer /ipfw
-    if (message?.author.id == userInfo.appID &&
-        message?.type == MessageType.ChatInputCommand &&
-        message?.interaction?.commandName == userInfo.command) {
-        await updateDDNS(message.content);
-    }
-})
 
 client.once(Events.ClientReady, readyClient => {
     log.log(`初始化完成！以 ${readyClient.user.tag} 身份登录！`);

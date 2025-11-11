@@ -3,21 +3,6 @@
   "clientID": "bot user (ID)",
   "guildID": "dev guild (ID)",
   "webSLP": "The server where https://github.com/Myitian/WebServerListPing/ is deployed",
-  "userInfo": {
-    "token": "USER TOKEN",
-    "guildID": "guild (ID)",
-    "channelID": "channel (ID)",
-    "appID": "command provider app (ID)",
-    "command": "command name"
-  },
-  "cloudflare": {
-    "token": "CF TOKEN",
-    "domain": "example.com",
-    "records": [
-      "www.example.com",
-      "@.example.com"
-    ]
-  },
   "pixiv": {
     "refreshTokens": ["refreshToken from pixiv_auth.py"]
   }

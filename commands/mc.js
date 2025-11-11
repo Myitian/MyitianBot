@@ -34,8 +34,7 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
-        /** @type {CommandInteractionOptionResolver} */
-        // @ts-ignore
+        /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const subcommand = options.getSubcommand();
         switch (subcommand) {

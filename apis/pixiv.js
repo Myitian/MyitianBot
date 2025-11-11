@@ -188,31 +188,6 @@ module.exports = {
 
         const iUrl = `https://www.pixiv.net/ajax/illust/${pid}`;
         log.log("Requesting", iUrl);
-        /** @type {{
-            error:boolean,
-            message:string,
-            body:{
-                aiType:number,
-                createDate:string,
-                description:string,
-                id:string,
-                illustType:number,
-                tags:{
-                    tags:{
-                        tag:string
-                    }[]
-                },
-                title:string,
-                uploadDate:string,
-                userId:string,
-                xRestrict:number,
-                pageCount:number,
-                viewCount:number,
-                likeCount:number,
-                bookmarkCount:number,
-                commentCount:number
-            }
-        }} */
         const illust = (await axios.get(iUrl, { responseType: "json" })).data;
 
         let illustType = "";

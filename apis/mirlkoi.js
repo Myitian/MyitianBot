@@ -1,4 +1,3 @@
-const { randomInt } = require("node:crypto");
 const axios = require("axios");
 const log = require("../log");
 
@@ -9,18 +8,13 @@ module.exports = {
      * @returns {Promise<{pic:string[]}>}
      */
     async getJson(sort = undefined, num = undefined) {
-        const search = new URLSearchParams([
-            ["type", "json"]
-        ]);
-
+        const search = new URLSearchParams([["type", "json"]]);
         if (sort !== null && sort !== undefined)
             search.set("sort", sort);
         if (num !== null && num !== undefined)
             search.set("num", num.toString());
-
-        const url = `https://${["", "api.", "dev."][randomInt(3)]}iw233.cn/api.php?${search}`;
+        const url = `https://cnmiw.com/api.php?${search}`;
         log.log("Requesting", url);
-
         const resp = await axios({
             method: "get",
             url: url,

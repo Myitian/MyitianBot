@@ -23,8 +23,7 @@ module.exports = {
     /** @param {CommandInteraction} interaction */
     async execute(interaction) {
         await interaction.deferReply();
-        /** @type {CommandInteractionOptionResolver} */
-        // @ts-ignore
+        /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const url = options.getString("url");
         const ua = options.getString("user-agent");

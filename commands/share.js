@@ -6,6 +6,25 @@ const { getIllustInfo, getUserInfo, getImageURL } = require("../apis/pixiv");
 const { getMD, getVID, getMC, getEP } = require("../apis/bilibili");
 const { formatDateTime, durationToString } = require("../utils");
 
+const aiTagSet = new Set([
+    "#AI生成イラスト",
+    "#Aiイラスト",
+    "#aiイラスト",
+    "#AI绘图",
+    "#AI生成",
+    "#Ai绘画",
+    "#AI 画作",
+    "#AI画像",
+    "#AI作品",
+    "#Stablediffusion",
+    "#stable-diffusion",
+    "#AI-Generated",
+    "#AI_Generated",
+    "#AIGenerated",
+    "#AiArt",
+    "#AI image"]);
+
+/** @typedef {"lite"|"details"|"big-img"} ShareCommandReturnType */
 
 /**
  * @param {string} value
@@ -17,7 +36,11 @@ function lengthLimiter(value, maxLength = 2000) {
     return value;
 }
 
-
+/**
+ * @param {ShareCommandReturnType} returnType
+ * @param {string|number|undefined|null} aid
+ * @param {string|undefined|null} bvid
+ */
 async function processVID(returnType, aid = undefined, bvid = undefined) {
     const info = await getVID(aid, bvid);
     if (!info) {
@@ -73,8 +96,12 @@ async function processVID(returnType, aid = undefined, bvid = undefined) {
     return builder;
 }
 
-async function processMC(returnType, mdid) {
-    const mc = await getMC(mdid);
+/**
+ * @param {ShareCommandReturnType} returnType
+ * @param {string|number} mcid
+ */
+async function processMC(returnType, mcid) {
+    const mc = await getMC(mcid);
     if (!mc) {
         return null;
     } else if (mc.code) {
@@ -117,6 +144,10 @@ async function processMC(returnType, mdid) {
     return builder;
 }
 
+/**
+ * @param {ShareCommandReturnType} returnType
+ * @param {string|number} mdid
+ */
 async function processMD(returnType, mdid) {
     const md = await getMD(mdid);
     if (!md)
@@ -159,6 +190,11 @@ async function processMD(returnType, mdid) {
     return builder;
 }
 
+/**
+ * @param {ShareCommandReturnType} returnType
+ * @param {string|number} epid
+ * @param {boolean} [isCheese]
+ */
 async function processEP(returnType, epid, isCheese = undefined) {
     const info = await getEP(epid, isCheese);
     if (!info) {
@@ -248,9 +284,9 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         const commandID = `(${randomInt(0x100000000).toString(16).padStart(8, "0")})`;
-        /** @type {CommandInteractionOptionResolver} */
-        // @ts-ignore
+        /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
+        /** @ts-ignore @type {ShareCommandReturnType} returnType */
         const returnType = options.getString("return");
         const subcommand = options.getString("source");
         switch (subcommand) {
@@ -330,8 +366,7 @@ module.exports = {
                 break;
             case "pixiv":
                 {
-                    /** @type {BaseGuildTextChannel} */
-                    // @ts-ignore
+                    /** @ts-ignore @type {BaseGuildTextChannel} */
                     const channel = interaction.channel;
                     const id = options.getString("id").trim();
 
@@ -339,9 +374,11 @@ module.exports = {
                     const embeds = [];
 
                     const info = await getIllustInfo(id);
-                    if (!info)
+                    if (!info) {
                         content = "无效的ID！正确格式：\n`\\d+`\n`\\d+_p\\d+`\n`\\d+-\\d+";
-                    else if (info.r18Type !== "全年龄" && !channel.nsfw) {
+                    } else if (info.r18Type !== "全年龄" && !channel) {
+                        content = "未获取到频道信息，无法访问NSFW内容。";
+                    } else if (info.r18Type !== "全年龄" && !channel.nsfw) {
                         content = "您正在尝试在无年龄限制的频道内访问NSFW内容。请移步至有年龄限制的频道。";
                     } else {
                         if (info.p < 0)
@@ -353,6 +390,9 @@ module.exports = {
 
                         const description = lengthLimiter(info.description.trim());
                         const tags = lengthLimiter(info.tags.join(" "));
+                        if (info.tags.some(item => aiTagSet.has(item))) {
+                            info.aiType += "（基于Tag时：是）";
+                        }
 
                         const avaterURL = user.body.image.replace("pximg.net", "pixiv.cat");
                         const imageURL = (await getImageURL(info.pid, info.p))?.replace("pximg.net", "pixiv.cat");
