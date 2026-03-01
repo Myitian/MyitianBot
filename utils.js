@@ -16,15 +16,45 @@ function isHex(char) {
     return !Number.isNaN(parseInt(char, 16));
 }
 
-const DDNS = {
-    executing: false,
-    updated: false,
-    lastUpdate: new Date(0),
-    lastIP: ""
-};
-
 module.exports = {
     sharedData: {
+    },
+    /**
+     * @param {string} url
+     */
+    async fetchJson(url, checkStatus = true) {
+        log.log("Requesting", url);
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            if (checkStatus) {
+                throw new Error(`Failed to get ${url} : status code ${resp.status}`);
+            } else {
+                log.warn(`Failed to get ${url} : status code ${resp.status}`);
+            }
+        }
+        return await resp.json();
+    },
+    /**
+     * @param {string} url
+     * @param {*} payload
+     */
+    async postJson(url, payload, checkStatus = true) {
+        log.log("Requesting", url);
+        const resp = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            if (checkStatus) {
+                throw new Error(`Failed to post ${url} : status code ${resp.status}\npayload:\n${payload}`);
+            } else {
+                log.warn(`Failed to post ${url} : status code ${resp.status}`);
+            }
+        }
+        return await resp.json();
     },
     /**
      * @param {string} url
@@ -73,6 +103,25 @@ module.exports = {
             name: name ?? fallbackName,
             data: fileResp.data
         };
+    },
+    /**
+     * @param {string} str
+     * @param {string} separator
+     * @param {number} limit
+     */
+    splitWithTail(str, separator, limit) {
+        const result = [];
+        let currentIndex = 0;
+        while (result.length < limit - 1) {
+            const foundIndex = str.indexOf(separator, currentIndex);
+            if (foundIndex === -1) {
+                break;
+            }
+            result.push(str.slice(currentIndex, foundIndex));
+            currentIndex = foundIndex + separator.length;
+        }
+        result.push(str.slice(currentIndex));
+        return result;
     },
     /**
      * @param {number|Date} datetime

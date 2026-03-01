@@ -25,10 +25,10 @@ module.exports = {
         await interaction.deferReply();
         /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
-        const url = options.getString("url");
+        const url = options.getString("url") ?? "";
         const ua = options.getString("user-agent");
         const auth = options.getString("authorization");
-        const maxLength = options.getInteger("max-length");
+        const maxLength = options.getInteger("max-length") ?? undefined;
         log.log("Requesting", url);
         const headers = {};
         if (ua != null) {

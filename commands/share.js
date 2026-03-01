@@ -292,7 +292,7 @@ module.exports = {
         switch (subcommand) {
             case "bilibili":
                 {
-                    const id = options.getString("id").trim();
+                    const id = options.getString("id")?.trim() ?? "";
 
                     const numIDRx = /([a-z]{2})(\d+)/i;
                     const BVIDRx = /[Bb][Vv][\dA-Za-z]{10}/;
@@ -368,7 +368,7 @@ module.exports = {
                 {
                     /** @ts-ignore @type {BaseGuildTextChannel} */
                     const channel = interaction.channel;
-                    const id = options.getString("id").trim();
+                    const id = options.getString("id")?.trim() ?? "";
 
                     let content = null;
                     const embeds = [];
@@ -394,14 +394,22 @@ module.exports = {
                             info.aiType += "（基于Tag时：是）";
                         }
 
-                        const avaterURL = user.body.image.replace("pximg.net", "pixiv.cat");
-                        const imageURL = (await getImageURL(info.pid, info.p))?.replace("pximg.net", "pixiv.cat");
+                        /**
+                         * @param {string?} src
+                         */
+                        function fixImage(src) {
+                            // return src;
+                            return src?.replace("pximg.net", "pixiv.cat");
+                        }
+
+                        const avaterURL = fixImage(user.body.image);
+                        const imageURL = fixImage(await getImageURL(info.pid, info.p, "https://pixiv.cat/"));
                         log.log(commandID, "Pixiv", info.pid, info.p, imageURL);
 
                         let builder = new EmbedBuilder()
                             .setTitle(info.title)
                             .setURL(`https://www.pixiv.net/artworks/${info.pid}`)
-                            .setAuthor({ name: user.body.name, iconURL: avaterURL.toString(), url: `https://www.pixiv.net/users/${info.authorId}` })
+                            .setAuthor({ name: user.body.name, iconURL: avaterURL, url: `https://www.pixiv.net/users/${info.authorId}` })
                             .setTimestamp(info.time);
                         switch (returnType) {
                             case "lite":

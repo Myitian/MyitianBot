@@ -1,5 +1,4 @@
-const axios = require("axios");
-const log = require("../log");
+const { fetchJson } = require("../utils");
 
 module.exports = {
     /**
@@ -32,13 +31,6 @@ module.exports = {
             search.set("db", db.toString());
 
         const url = "https://image.anosu.top/pixiv/json?" + search.toString();
-        log.log("Requesting", url);
-
-        const resp = await axios({
-            method: "get",
-            url: url,
-            responseType: "json"
-        });
-        return resp.data;
+        return await fetchJson(url);
     }
 }

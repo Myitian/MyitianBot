@@ -1,6 +1,6 @@
-const axios = require("axios");
+const { LRUCache } = require("lru-cache");
 const log = require("../log");
-const { sample } = require("../utils");
+const { fetchJson, sample, default: utils } = require("../utils");
 
 /**
  * @typedef {object} DanBooruResponse
@@ -73,59 +73,69 @@ const { sample } = require("../utils");
 
 /**
  * @typedef {DanBooruResponse|MoeBooruResponse|E621NGResponse} BooruAPIResponse
- */
-/**
+ *
  * @typedef {"danbooru"|"moebooru"|"e621ng"} BooruAPIType
  */
 
 /**
+ * @type {LRUCache<string, number, unknown>}
+ */
+const LRU_CACHE = new LRUCache({
+    max: 256,
+    ttl: 1000 * 60 * 10,
+    allowStale: true,
+    fetchMethod: (key, _staleValue, _options) => {
+        const args = utils.splitWithTail(key, "\0", 3);
+        // @ts-ignore
+        return getCountByBinarySearch(args[0], args[1], args[2]);
+    }
+});
+const SITE_CONFIG = {
+    "moebooru": {
+        binarySearchMaxPageCount: 16384,
+        maxPageCount: 1000000,
+        maxBatchSize: 100,
+    },
+    "danbooru": {
+        binarySearchMaxPageCount: 5,
+        maxPageCount: 1000,
+        maxBatchSize: 200,
+    },
+    "e621ng": {
+        binarySearchMaxPageCount: 3,
+        maxPageCount: 750,
+        maxBatchSize: 320,
+    },
+}
+
+/**
  * @param {string} api
- * @param {string} tags
  * @param {BooruAPIType} type
+ * @param {string} tags
  * @param {number} limit
  * @param {number} page
  * @returns {Promise<BooruAPIResponse>}
  */
-async function get(api, tags, type, limit = 1, page = 1) {
+async function get(api, type, tags, limit = 1, page = 1) {
     const url = `${api}?limit=${limit}&page=${page}&tags=${encodeURIComponent(tags)}`;
-    log.log("Requesting", url);
-    const resp = await axios({
-        method: "get",
-        url: url,
-        responseType: "json"
-    });
     return {
         type: type,
-        data: resp.data
+        data: await fetchJson(url)
     };
 }
 /**
  * @param {string} api
- * @param {string} tags
  * @param {BooruAPIType} type
+ * @param {string} tags
  * @returns {Promise<number>}
  */
-async function getCountByBinarySearch(api, tags, type) {
-    let maxPageCount = 1;
-    let batchSize = 1;
-    switch (type) {
-        case "moebooru":
-            maxPageCount = 16384;
-            batchSize = 100;
-            break;
-        case "danbooru":
-            maxPageCount = 1000;
-            batchSize = 200;
-            break;
-        case "e621ng":
-            maxPageCount = 750;
-            batchSize = 320;
-            break;
-    }
-    let lo = 1, hi = maxPageCount;
+async function getCountByBinarySearch(api, type, tags) {
+    const config = SITE_CONFIG[type];
+    const batchSize = config.maxBatchSize;
+    let lo = 1, hi = config.binarySearchMaxPageCount;
     while (lo <= hi) {
         const mid = (lo + hi) >> 1;
-        const resp = await get(api, tags, type, batchSize, mid);
+        const resp = await get(api, type, tags, batchSize, mid);
         log.log(lo, mid, hi, resp.data.length);
         if (!resp.data.length) {
             hi = mid - 1;
@@ -137,35 +147,27 @@ async function getCountByBinarySearch(api, tags, type) {
     }
     return hi * batchSize;
 }
-
+async function getCachedCountByBinarySearch(api, tags, type) {
+    return await LRU_CACHE.fetch(`${api}\0${type}\0${tags}`);
+}
 
 module.exports = {
     /**
      * @param {string} api
+     * @param {BooruAPIType} type
      * @param {string} tags
      * @param {number} num
-     * @param {BooruAPIType} type
      * @returns {Promise<BooruAPIResponse>}
      */
-    async getRandom(api, tags, num, type) {
-        const total = await getCountByBinarySearch(api, tags, type);
-        log.log("Total:", total);
-        let maxPageCount = 1;
-        let maxBatchSize = 1;
-        switch (type) {
-            case "moebooru":
-                maxPageCount = 1000000;
-                maxBatchSize = 100;
-                break;
-            case "danbooru":
-                maxPageCount = 1000;
-                maxBatchSize = 200;
-                break;
-            case "e621ng":
-                maxPageCount = 750;
-                maxBatchSize = 320;
-                break;
+    async getRandom(api, type, tags, num) {
+        const total = await getCachedCountByBinarySearch(api, type, tags);
+        if (total == undefined) {
+            throw new Error(`Cannot get CachedCountByBinarySearch for ${api}, ${type}, ${tags}`);
         }
+        log.log("Total:", total);
+        const config = SITE_CONFIG[type];
+        const maxPageCount = config.maxPageCount;
+        const maxBatchSize = config.maxBatchSize;
         const pages = sample(0, total, num);
         const array = new Array(pages.length);
         for (let i = 0; i < pages.length; i++) {
@@ -178,10 +180,10 @@ module.exports = {
                 throw Error("tempPageSize > maxBatchSize");
             }
             try {
-                array[i] = (await get(api, tags, type, tempPageSize, pageIndex + 1)).data[inPageIndex];
+                array[i] = (await get(api, type, tags, tempPageSize, pageIndex + 1)).data[inPageIndex];
             } catch (ex) {
                 log.error(ex);
-                if (typeof(ex) === "string") {
+                if (typeof (ex) === "string") {
                     array[i] = ex;
                 } else if (ex instanceof Error) {
                     array[i] = `${ex.name}: ${ex.message}`;
@@ -195,12 +197,12 @@ module.exports = {
     },
     /**
      * @param {string} api
+     * @param {BooruAPIType} type
      * @param {string} tags
      * @param {number} num
-     * @param {BooruAPIType} type
      * @returns {Promise<BooruAPIResponse>}
      */
-    async getNewest(api, tags, num, type) {
-        return await get(api, tags, type, num);
+    async getNewest(api, type, tags, num) {
+        return await get(api, type, tags, num);
     }
 }

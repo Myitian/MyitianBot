@@ -18,7 +18,7 @@ module.exports = {
         await interaction.deferReply();
         /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
-        const id = options.getString("id");
+        const id = options.getString("id") ?? "";
         const channel = options.getString("channel");
         if (channel === null) {
             await interaction.editReply(`正在搜索频道……`);

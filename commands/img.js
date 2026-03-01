@@ -211,8 +211,8 @@ module.exports = {
 
                     const response = await lolicon_api_v1.getJson({
                         r18: r18,
-                        keyword: keyword,
-                        num: num
+                        keyword: keyword ?? undefined,
+                        num: num ?? undefined
                     });
 
                     if (response.code === 0 && response.data) {
@@ -256,11 +256,12 @@ module.exports = {
                 break;
             case "lolicon-api-v2":
                 {
-                    /** @ts-ignore @type {0|1|2} */
+                    /** @ts-ignore @type {0|1|2|undefined} */
                     const r18 = options.getInteger("r18") ?? undefined;
                     const num = options.getInteger("num") ?? undefined;
                     const uid = options.getString("uid")?.split(",").map(it => parseInt(it)) ?? undefined;
                     const keyword = options.getString("keyword") ?? undefined;
+                    /** @ts-ignore @type {string[]} */ 
                     const tag = [options.getString("tag1"), options.getString("tag2"), options.getString("tag3")].filter(it => !!it);
                     const dateAfter = options.getInteger("date-after") ?? undefined;
                     const dateBefore = options.getInteger("date-before") ?? undefined;
@@ -306,7 +307,7 @@ module.exports = {
                                     { name: "R18", value: setu.r18 ? "是" : "否", inline: true },
                                     { name: "AI", value: setu.aiType !== 2 ? setu.aiType === 0 ? "未知" : "否" : "是", inline: true }
                                 )
-                                .setImage(setu.urls.small)
+                                .setImage(setu.urls.small ?? null)
                                 .setTimestamp(new Date(setu.uploadDate)));
                         }
                     }
@@ -514,8 +515,8 @@ module.exports = {
                     const embeds = [];
 
                     const response = random ?
-                        await booru.getRandom(api, tags, num, type) :
-                        await booru.getNewest(api, tags, num, type);
+                        await booru.getRandom(api, type, tags, num) :
+                        await booru.getNewest(api, type, tags, num);
 
                     let error = 0;
                     let errorMessages = [];
@@ -551,25 +552,25 @@ module.exports = {
                             filteredNSFW++;
                             continue;
                         }
-                        /** @type {string} */
+                        /** @type {string?} */
                         let tagString = null;
-                        /** @type {string} */
+                        /** @type {string?} */
                         let md5 = null;
-                        /** @type {number} */
+                        /** @type {number?} */
                         let fileSize = null;
-                        /** @type {number} */
+                        /** @type {number?} */
                         let fileWidth = null;
-                        /** @type {number} */
+                        /** @type {number?} */
                         let fileHeight = null;
-                        /** @type {string} */
+                        /** @type {string?} */
                         let fileExt = null;
-                        /** @type {string} */
+                        /** @type {string?} */
                         let fileURL = null;
-                        /** @type {string} */
+                        /** @type {string?} */
                         let sampleURL = null;
-                        /** @type {Date} */
+                        /** @type {Date?} */
                         let updatedAt = null;
-                        /** @type {number} */
+                        /** @type {number?} */
                         let score = null;
 
                         switch (type) {

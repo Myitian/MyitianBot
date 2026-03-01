@@ -42,7 +42,7 @@ module.exports = {
                 {
                     log.log("mc ping");
 
-                    const rawHost = options.getString("host").trim();
+                    const rawHost = options.getString("host")?.trim() ?? "";
                     const rawPort = options.getInteger("port");
 
                     const split = rawHost.split(":", 2);
@@ -66,10 +66,12 @@ module.exports = {
                                 { name: "地址", value: (rawPort === null || rawPort === undefined || Number.isNaN(rawPort)) ? rawHost : `${rawHost}:${rawPort}`, inline: true }
                             );
                         if (info.favicon) {
-                            const favicon = Buffer.from(info.favicon.split(",")[1], "base64");
-                            files.push(new AttachmentBuilder(favicon)
-                                .setName("favicon.png"));
-                            builder.setThumbnail("attachment://favicon.png")
+                            try {
+                                const favicon = Buffer.from(info.favicon.split(",")[1], "base64");
+                                files.push(new AttachmentBuilder(favicon)
+                                    .setName("favicon.png"));
+                                builder.setThumbnail("attachment://favicon.png")
+                            } catch { }
                         }
                         embeds.push(builder);
                     } catch (e) {
@@ -88,7 +90,7 @@ module.exports = {
                 {
                     log.log("mc skin");
 
-                    const name = options.getString("name").trim();
+                    const name = options.getString("name")?.trim() ?? "";
 
                     const url = name.length === 32 ?
                         `https://sessionserver.mojang.com/session/minecraft/profile/${name}` :

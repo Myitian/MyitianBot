@@ -81,11 +81,11 @@ module.exports = {
         /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         const subcommand = options.getSubcommand();
-        let content = options.getString("content");
+        let content = options.getString("content") ?? "";
         const attachment = options.getAttachment("attachment");
         const reference = options.getString("reference");
         log.log("say", subcommand);
-        const files = attachment == null ? null : [attachment];
+        const files = attachment == null ? undefined : [attachment];
         switch (subcommand) {
             case "raw":
                 break;
@@ -107,7 +107,7 @@ module.exports = {
             return;
         } else {
             await interaction.reply({ content: "正在发送……", ephemeral: true });
-            await interaction.channel.send({ content: content, files: files, reply: { messageReference: reference, failIfNotExists: false } });
+            await interaction.channel?.send({ content: content, files: files, reply: { messageReference: reference, failIfNotExists: false } });
         }
     },
 };

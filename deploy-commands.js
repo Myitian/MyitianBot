@@ -1,11 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { REST, Routes } = require("discord.js");
-const { clientID, guildID, token } = require("./config.json");
+const { guildID, token } = require("./config.json");
 const log = require("./log");
 
 module.exports = {
-    async deployCommands() {
+    /**
+     * @param {string} clientID
+     */
+    async deployCommands(clientID) {
 
         const commands = [];
         const commandsPath = path.join(__dirname, "commands");
@@ -47,7 +50,6 @@ module.exports = {
         }
 
         const rest = new REST().setToken(token);
-
 
         try {
             log.log(`开始刷新应用命令！`);

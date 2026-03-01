@@ -25,7 +25,7 @@ function dnsResolve46(host) {
  */
 function dnsResolveSimple(host, type) {
     return new Promise((resolve, _) => {
-        /** @type {(hostname:string,callback:(err:NodeJS.ErrnoException|null,addresses:string[])=>void)=>void} */
+        /** @type {((hostname:string,callback:(err:NodeJS.ErrnoException|null,addresses:string[])=>void)=>void)?} */
         let dnsResolve = null;
         switch (type) {
             case "A":
@@ -189,7 +189,7 @@ module.exports = {
         /** @ts-ignore @type {CommandInteractionOptionResolver} */
         const options = interaction.options;
         await interaction.reply("正在查询……");
-        const host = options.getString("host");
+        const host = options.getString("host") ?? "";
         /** @type {"A"|"AAAA"|"ANY"|"CAA"|"CNAME"|"NAPTR"|"NS"|"MX"|"PTR"|"SOA"|"SRV"|"TXT"|null|string} */
         const type = options.getString("type");
         log.log("nslookup", type, host);

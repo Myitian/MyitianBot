@@ -156,7 +156,7 @@ module.exports = {
                         await interaction.deferReply();
                         const content = options.getString("text");
                         const files = [];
-                        /** @type {Attachment|AttachmentBuilder} */
+                        /** @type {Attachment|AttachmentBuilder?} */
                         let attachment = options.getAttachment("attachment");
                         const link = options.getString("attachment-link");
                         const name = options.getString("name");
@@ -192,17 +192,15 @@ module.exports = {
                     }
                     break;
                 case "voice":
+                    if (interaction.channel == null) {
+                        await interaction.reply({ content: "发送失败", ephemeral: true });
+                        break;
+                    }
                     await interaction.reply({ content: "正在准备……", ephemeral: true });
                     const attachment = options.getAttachment("file");
                     let attachmentLink = options.getString("file-link");
                     const duration = options.getInteger("duration");
                     const waveform = options.getString("waveform");
-                    const rest = new REST().setToken(token);
-                    if (attachment == null && attachmentLink == null) {
-                        await interaction.editReply({ content: "请至少提供一种文件来源！" });
-                        break;
-                    }
-                    await interaction.editReply("正在下载文件……");
                     let filename = null;
                     let file_size = -1;
                     if (attachment != null) {
@@ -210,12 +208,18 @@ module.exports = {
                         filename = attachment.name;
                         file_size = attachment.size;
                     }
+                    if (attachmentLink == null) {
+                        await interaction.editReply({ content: "请至少提供一种文件来源！" });
+                        break;
+                    }
+                    const rest = new REST().setToken(token);
                     const extHeaders = [
                         options.getString("ext-header-0"),
                         options.getString("ext-header-1"),
                         options.getString("ext-header-2"),
                         options.getString("ext-header-3")
                     ];
+                    await interaction.editReply("正在下载文件……");
                     const fileResp = await getFile(attachmentLink, "voice.ogg", extHeaders);
                     await interaction.editReply("正在获取上传链接……");
                     /** @ts-ignore @type {{attachments:{id:number,upload_url:string,upload_filename:string}[]}} */
@@ -273,8 +277,8 @@ module.exports = {
                     if (authorName || authorIcon)
                         embed.setAuthor({
                             name: authorName ?? "\u200B",
-                            url: options.getString("author-url"),
-                            iconURL: authorIcon
+                            url: options.getString("author-url") ?? undefined,
+                            iconURL: authorIcon ?? undefined
                         });
                     embed.setTitle(options.getString("title"));
                     embed.setURL(options.getString("url"));
@@ -288,7 +292,7 @@ module.exports = {
                     if (footerText || footerIcon)
                         embed.setFooter({
                             text: footerText ?? "\u200B",
-                            iconURL: footerIcon
+                            iconURL: footerIcon ?? undefined
                         })
                     embed.setTimestamp(options.getInteger("timestamp"));
                     for (let i = 0; i < 3; i++) {

@@ -1,5 +1,4 @@
-const axios = require("axios");
-const log = require("../log");
+const { fetchJson } = require("../utils");
 
 module.exports = {
     /**
@@ -14,12 +13,6 @@ module.exports = {
         if (num !== null && num !== undefined)
             search.set("num", num.toString());
         const url = `https://cnmiw.com/api.php?${search}`;
-        log.log("Requesting", url);
-        const resp = await axios({
-            method: "get",
-            url: url,
-            responseType: "json"
-        });
-        return resp.data;
+        return await fetchJson(url);
     }
 }

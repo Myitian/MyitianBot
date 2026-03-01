@@ -1,5 +1,4 @@
-const axios = require("axios");
-const log = require("../log");
+const { postJson } = require("../utils");
 
 /**
  * @typedef {"original"|"regular"|"small"|"thumb"|"mini"} ImageSize
@@ -56,10 +55,6 @@ module.exports = {
      * @returns {Promise<Response>}
      */
     async getJson(request = {}) {
-        const search = new URLSearchParams();
-        const url = "https://api.lolicon.app/setu/v2"
-        log.log("Requesting", url);
-        const resp = await axios.post(url, request, { responseType: "json" });
-        return resp.data;
+        return await postJson("https://api.lolicon.app/setu/v2", request);
     }
 }

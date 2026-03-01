@@ -1,5 +1,4 @@
-const axios = require("axios");
-const log = require("../log");
+const { fetchJson } = require("../utils");
 
 /**
  * @typedef {object} Request
@@ -50,9 +49,6 @@ module.exports = {
         }
 
         const url = "https://api.lolicon.app/setu/v1?" + search.toString();
-        log.log("Requesting", url);
-
-        const resp = await axios.get(url, { responseType: "json" });
-        return resp.data;
+        return await fetchJson(url);
     }
 }

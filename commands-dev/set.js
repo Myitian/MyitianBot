@@ -29,7 +29,7 @@ module.exports = {
         switch (subcommand) {
             case "status":
                 {
-                    const status = options.getString("value");
+                    const status = options.getString("value") ?? "";
                     // @ts-ignore
                     interaction.client.user.setStatus(status);
                     await interaction.editReply(status);

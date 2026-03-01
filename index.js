@@ -5,8 +5,6 @@ const { token } = require("./config.json");
 const { deployCommands } = require("./deploy-commands");
 const log = require("./log");
 
-deployCommands();
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -81,6 +79,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
 client.once(Events.ClientReady, readyClient => {
     log.log(`初始化完成！以 ${readyClient.user.tag} 身份登录！`);
+    deployCommands(readyClient.user.id);
 });
 
 client.login(token);
