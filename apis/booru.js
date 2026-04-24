@@ -6,49 +6,49 @@ const { fetchJson, sample, default: utils } = require("../utils");
  * @typedef {object} DanBooruResponse
  * @property {"danbooru"} type
  * @property {DanBooruItem[]} data
- * 
+ *
  * @typedef {object} DanBooruItem
  * @property {number} id
  * @property {string} rating
  * @property {string} updated_at
  * @property {number} score
  * @property {string} tag_string
- * 
+ *
  * @property {string} md5
  * @property {number} file_size
  * @property {string} file_ext
  * @property {string} file_url
  * @property {number} image_width
  * @property {number} image_height
- * 
+ *
  * @property {string} large_file_url
  */
 /**
  * @typedef {object} MoeBooruResponse
  * @property {"moebooru"} type
  * @property {MoeBooruItem[]} data
- * 
+ *
  * @typedef {object} MoeBooruItem
  * @property {number} id
  * @property {string} rating
  * @property {number} updated_at
  * @property {number} score
  * @property {string} tags
- * 
+ *
  * @property {string} md5
  * @property {number} file_size
  * @property {string} file_ext
  * @property {string} file_url
  * @property {number} width
  * @property {number} height
- * 
+ *
  * @property {string} sample_url
  */
 /**
  * @typedef {object} E621NGResponse
  * @property {"e621ng"} type
  * @property {E621NGItem[]} data
- * 
+ *
  * @typedef {object} E621NGItem
  * @property {number} id
  * @property {string} rating
@@ -59,7 +59,7 @@ const { fetchJson, sample, default: utils } = require("../utils");
  *                total: number
  *           }} score
  * @property {Object.<string,string[]>} tags
- * 
+ *
  * @property {{
  *                width: number,
  *                height: number,

@@ -126,7 +126,7 @@ async function getPixivIllustIdData(pid) {
  *      name: string,
  *      image: string,
  *      imageBig: string
- *  }}} UserInfo 
+ *  }}} UserInfo
  */
 /** @typedef {{
  *  urls:{
@@ -137,7 +137,7 @@ async function getPixivIllustIdData(pid) {
  *  },
  *  width:number,
  *  height:number
- *  }} PageInfo 
+ *  }} PageInfo
  */
 module.exports = {
     /**
@@ -265,7 +265,7 @@ module.exports = {
         };
     },
     /**
-     * @param {string} uid 
+     * @param {string} uid
      * @returns {Promise<UserInfo>}>}
      */
     async getUserInfo(uid) {
@@ -273,7 +273,7 @@ module.exports = {
         return await fetchJson(uUrl);
     },
     /**
-     * @param {string} pid 
+     * @param {string} pid
      * @param {number} p
      * @param {*} proxy
      * @returns {Promise<string?>}>}

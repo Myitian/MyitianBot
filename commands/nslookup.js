@@ -1,7 +1,6 @@
-const { SlashCommandBuilder, CommandInteraction, CommandInteractionOptionResolver, escapeMarkdown } = require("discord.js");
+const { SlashCommandBuilder, CommandInteraction, CommandInteractionOptionResolver } = require("discord.js");
 const dns = require("node:dns");
 const log = require("../log");
-const { formatDateTime } = require("../utils");
 
 /**
  * @param {string} host
@@ -20,7 +19,7 @@ function dnsResolve46(host) {
 }
 /**
  * @param {string} host
- * @param {"A"|"AAAA"|"CNAME"|"NS"|"PTR"} type 
+ * @param {"A"|"AAAA"|"CNAME"|"NS"|"PTR"} type
  * @returns {Promise<string[]>}
  */
 function dnsResolveSimple(host, type) {
@@ -309,6 +308,6 @@ minttl=${dnsResult.minttl}
                 result = "尚未实现！";
                 break;
         }
-        await interaction.editReply(escapeMarkdown(result));
+        await interaction.editReply(result);
     },
 };

@@ -3,6 +3,7 @@ const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits, Partials, MessageType } = require("discord.js");
 const { token } = require("./config.json");
 const { deployCommands } = require("./deploy-commands");
+const { printError } = require("./utils");
 const log = require("./log");
 
 const client = new Client({
@@ -65,9 +66,9 @@ client.on(Events.InteractionCreate, async interaction => {
                 const error = e instanceof Error ? e : new Error(e);
                 log.error(error);
                 if (interaction.replied || interaction.deferred) {
-                    await interaction.followUp({ content: `执行命令时出现异常！\n${error.message}`, ephemeral: true });
+                    await interaction.followUp({ content: `执行命令时出现异常！\n${printError(error).substring(0, 1000)}`, ephemeral: true });
                 } else {
-                    await interaction.reply({ content: `执行命令时出现异常！\n${error.message}`, ephemeral: true });
+                    await interaction.reply({ content: `执行命令时出现异常！\n${printError(error).substring(0, 1000)}`, ephemeral: true });
                 }
             }
         } catch (e) {

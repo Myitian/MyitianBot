@@ -352,7 +352,7 @@ module.exports = {
     },
     /**
      * @param {string|number} epid
-     * @param {boolean|undefined} isCheese 
+     * @param {boolean|undefined} isCheese
      * @returns {Promise<{
      *          failed:false,
      *          isCheese:boolean,
@@ -379,75 +379,77 @@ module.exports = {
      *      }|null>}
      */
     async getEP(epid, isCheese = undefined) {
-        while (!isCheese) {
-            const jsonUrl = `https://api.bilibili.com/pgc/season/episode/web/info?ep_id=${epid}`;
-            const jsonUrl2 = `https://api.bilibili.com/pgc/view/web/season?ep_id=${epid}`;
-            const jsonUrl3 = `https://api.bilibili.com/pgc/view/web/ep/list?ep_id=${epid}`;
-            log.log("Requesting", jsonUrl);
-            const info = (await axios({
-                method: "get",
-                url: jsonUrl,
-                responseType: "json"
-            })).data;
-            if (info.code) {
-                if (isCheese === false)
-                    return { failed: true, code: info.code, message: info.message };
-                break;
-            }
-            log.log("Requesting", jsonUrl2);
-            const info2 = (await axios({
-                method: "get",
-                url: jsonUrl2,
-                responseType: "json"
-            })).data;
-            const jsonUrlMD = `https://api.bilibili.com/pgc/review/user?media_id=${info2.result?.media_id}`;
-            log.log("Requesting", jsonUrlMD);
-            const infoMD = (await axios({
-                method: "get",
-                url: jsonUrlMD,
-                responseType: "json"
-            })).data;
-            log.log("Requesting", jsonUrl3);
-            const info3 = (await axios({
-                method: "get",
-                url: jsonUrl3,
-                responseType: "json"
-            })).data;
-            function extractData(ep) {
-                return {
-                    failed: false,
-                    isCheese: false,
-                    code: info.code,
-                    message: info.message,
-                    title: ep.share_copy,
-                    description: info2.result?.evaluate,
-                    cover: ep.cover,
-                    id: ep.id,
-                    bvid: ep.bvid,
-                    pubtime: ep.pub_time,
-                    duration: ep.duration,
-                    view: info.data?.stat?.view,
-                    danmaku: info.data?.stat?.dm,
-                    favorites: info2.result?.stat?.favorites,
-                    like: info.data?.stat?.like,
-                    coin: info.data?.stat?.coin,
-                    favorite: info.data?.stat?.favorite,
-                    typeName: infoMD.result?.media?.type_name
+        if (!isCheese) {
+            do {
+                const jsonUrl = `https://api.bilibili.com/pgc/season/episode/web/info?ep_id=${epid}`;
+                const jsonUrl2 = `https://api.bilibili.com/pgc/view/web/season?ep_id=${epid}`;
+                const jsonUrl3 = `https://api.bilibili.com/pgc/view/web/ep/list?ep_id=${epid}`;
+                log.log("Requesting", jsonUrl);
+                const info = (await axios({
+                    method: "get",
+                    url: jsonUrl,
+                    responseType: "json"
+                })).data;
+                if (info.code) {
+                    if (isCheese === false)
+                        return { failed: true, code: info.code, message: info.message };
+                    break;
                 }
-            }
-            for (const ep of info3.result.episodes) {
-                if (ep.id != epid)
-                    continue;
-                return extractData(ep);
-            }
-            for (const section of info3.result.section) {
-                for (const ep of section.episodes) {
+                log.log("Requesting", jsonUrl2);
+                const info2 = (await axios({
+                    method: "get",
+                    url: jsonUrl2,
+                    responseType: "json"
+                })).data;
+                const jsonUrlMD = `https://api.bilibili.com/pgc/review/user?media_id=${info2.result?.media_id}`;
+                log.log("Requesting", jsonUrlMD);
+                const infoMD = (await axios({
+                    method: "get",
+                    url: jsonUrlMD,
+                    responseType: "json"
+                })).data;
+                log.log("Requesting", jsonUrl3);
+                const info3 = (await axios({
+                    method: "get",
+                    url: jsonUrl3,
+                    responseType: "json"
+                })).data;
+                function extractData(ep) {
+                    return {
+                        failed: false,
+                        isCheese: false,
+                        code: info.code,
+                        message: info.message,
+                        title: ep.share_copy,
+                        description: info2.result?.evaluate,
+                        cover: ep.cover,
+                        id: ep.id,
+                        bvid: ep.bvid,
+                        pubtime: ep.pub_time,
+                        duration: ep.duration,
+                        view: info.data?.stat?.view,
+                        danmaku: info.data?.stat?.dm,
+                        favorites: info2.result?.stat?.favorites,
+                        like: info.data?.stat?.like,
+                        coin: info.data?.stat?.coin,
+                        favorite: info.data?.stat?.favorite,
+                        typeName: infoMD.result?.media?.type_name
+                    }
+                }
+                for (const ep of info3.result.episodes) {
                     if (ep.id != epid)
                         continue;
                     return extractData(ep);
                 }
-            }
-            return null;
+                for (const section of info3.result.section) {
+                    for (const ep of section.episodes) {
+                        if (ep.id != epid)
+                            continue;
+                        return extractData(ep);
+                    }
+                }
+                return null;
+            } while (false);
         }
         return null;
     }

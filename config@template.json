@@ -1,6 +1,6 @@
 {
   "token": "BOT TOKEN",
-  "clientID": "bot user (ID)",
+  "admin": ["admin user (ID)"],
   "guildID": "dev guild (ID)",
   "webSLP": "The server where https://github.com/Myitian/WebServerListPing/ is deployed",
   "pixiv": {

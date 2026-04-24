@@ -28,7 +28,7 @@ const aiTagSet = new Set([
 
 /**
  * @param {string} value
- * @param {number} maxLength 
+ * @param {number} maxLength
  */
 function lengthLimiter(value, maxLength = 2000) {
     if (value.length > maxLength)

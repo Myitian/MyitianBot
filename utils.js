@@ -1,3 +1,5 @@
+const { escapeMarkdown } = require("discord.js");
+const { CombinedPropertyError, CombinedError } = require("@sapphire/shapeshift");
 const path = require("node:path");
 const { randomInt } = require("node:crypto");
 const log = require("./log");
@@ -14,6 +16,26 @@ const dateTimeFormat = new Intl.DateTimeFormat('zh', {
  */
 function isHex(char) {
     return !Number.isNaN(parseInt(char, 16));
+}
+/**
+ * @param {readonly Error[]} errors
+ * @param {string[]} formatted
+ * @param {Set<Error>} listed 
+ */
+function printErrorInternal(errors, formatted, listed, indent = "") {
+    for (const e of errors) {
+        if (listed.has(e)) {
+            continue;
+        }
+        listed.add(e);
+        const line = `${indent}- ${escapeMarkdown(e.name)}: ${escapeMarkdown(e.message)}`;
+        formatted.push(line);
+        if (e instanceof CombinedError) {
+            printErrorInternal(e.errors, formatted, listed, `${indent}  `)
+        } else if (e instanceof CombinedPropertyError) {
+            printErrorInternal(e.errors.map(it => it[1]), formatted, listed, `${indent}  `)
+        }
+    }
 }
 
 module.exports = {
@@ -33,6 +55,15 @@ module.exports = {
             }
         }
         return await resp.json();
+    },
+    /**
+     * @param {readonly Error[]} errors
+     */
+    printError(...errors) {
+        /** @type {string[]} */
+        const formatted = [];
+        printErrorInternal(errors, formatted, new Set());
+        return formatted.join("\n")
     },
     /**
      * @param {string} url
@@ -59,7 +90,7 @@ module.exports = {
     /**
      * @param {string} url
      * @param {string} fallbackName
-     * @param {(string|null|undefined)[]} headers
+     * @param {readonly (string|null|undefined)[]} headers
      * @returns {Promise<{name:string,data:Buffer}>}
      */
     async getFile(url, fallbackName, headers) {
@@ -184,7 +215,7 @@ module.exports = {
         }
     },
     /**
-     * @param {string} str 
+     * @param {string} str
      * @returns {string}
      */
     escapeCSharpString(str) {

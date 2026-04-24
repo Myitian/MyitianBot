@@ -261,7 +261,7 @@ module.exports = {
                     const num = options.getInteger("num") ?? undefined;
                     const uid = options.getString("uid")?.split(",").map(it => parseInt(it)) ?? undefined;
                     const keyword = options.getString("keyword") ?? undefined;
-                    /** @ts-ignore @type {string[]} */ 
+                    /** @ts-ignore @type {string[]} */
                     const tag = [options.getString("tag1"), options.getString("tag2"), options.getString("tag3")].filter(it => !!it);
                     const dateAfter = options.getInteger("date-after") ?? undefined;
                     const dateBefore = options.getInteger("date-before") ?? undefined;
